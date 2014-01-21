@@ -47,6 +47,9 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 
 		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
 		cfg.useGL20 = false;
+		cfg.useAccelerometer = false;
+		cfg.useCompass = false;
+		cfg.useWakelock = true;
 
 		initialize(new NxtARCore(this), cfg);
 	}
