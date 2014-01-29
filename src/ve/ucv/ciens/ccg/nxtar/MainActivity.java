@@ -47,6 +47,12 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 	private boolean ocvOn;
 	private BaseLoaderCallback loaderCallback;
 
+	/*static {
+	    if (!OpenCVLoader.initDebug()) {
+	        Gdx.app.exit();
+	    }
+	}*/
+	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
