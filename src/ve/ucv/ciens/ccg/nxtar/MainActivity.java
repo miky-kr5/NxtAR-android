@@ -70,7 +70,7 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 		wifiManager = (WifiManager)getSystemService(Context.WIFI_SERVICE);
 
 		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
-		cfg.useGL20 = false;
+		cfg.useGL20 = true;
 		cfg.useAccelerometer = false;
 		cfg.useCompass = false;
 		cfg.useWakelock = true;
