@@ -47,14 +47,14 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 	private boolean ocvOn;
 	private BaseLoaderCallback loaderCallback;
 
-	/*static {
-	    if (!OpenCVLoader.initDebug()) {
+	/*static{
+	    if (!OpenCVLoader.initDebug()){
 	        Gdx.app.exit();
 	    }
 	}*/
-	
+
 	@Override
-	public void onCreate(Bundle savedInstanceState) {
+	public void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
 
 		ocvOn = false;
@@ -81,7 +81,6 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 				switch(status){
 				case LoaderCallbackInterface.SUCCESS:
 					ocvOn = true;
-					Toast.makeText(uiContext, R.string.ocv_success, Toast.LENGTH_LONG).show();
 					break;
 				default:
 					Toast.makeText(uiContext, R.string.ocv_failed, Toast.LENGTH_LONG).show();
@@ -99,20 +98,20 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 	// Toaster interface methods. //
 	////////////////////////////////
 	@Override
-	public void showShortToast(final String msg) {
-		uiHandler.post(new Runnable() {
+	public void showShortToast(final String msg){
+		uiHandler.post(new Runnable(){
 			@Override
-			public void run() {
+			public void run(){
 				Toast.makeText(uiContext, msg, Toast.LENGTH_SHORT).show();
 			}
 		});
 	}
 
 	@Override
-	public void showLongToast(final String msg) {
-		uiHandler.post(new Runnable() {
+	public void showLongToast(final String msg){
+		uiHandler.post(new Runnable(){
 			@Override
-			public void run() {
+			public void run(){
 				Toast.makeText(uiContext, msg, Toast.LENGTH_LONG).show();
 			}
 		});
@@ -130,7 +129,7 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 	}
 
 	@Override
-	public void disableMulticast() {
+	public void disableMulticast(){
 		Gdx.app.log(TAG, CLASS_NAME + ".disableMulticast() :: Releasing multicast lock.");
 		if(multicastLock != null){
 			multicastLock.release();
