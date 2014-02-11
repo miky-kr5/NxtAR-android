@@ -16,6 +16,6 @@
 -->
 <resources>
     <string name="app_name">NxtAR</string>
-    <string name="ocv_failed">Failed to initialize OpenCV</string>
-    <string name="ocv_success">OpenCV initialized successfully</string>
+    <string name="ocv_failed">No se pudo inicializar OpenCV</string>
+    <string name="ocv_success">OpenCV inicializado con exito</string>
 </resources>
