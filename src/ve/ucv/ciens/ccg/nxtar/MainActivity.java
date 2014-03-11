@@ -15,16 +15,21 @@
  */
 package ve.ucv.ciens.ccg.nxtar;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
+
 import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
-import org.opencv.core.Mat;
 
+import ve.ucv.ciens.ccg.nxtar.interfaces.CVProcessor;
 import ve.ucv.ciens.ccg.nxtar.interfaces.MulticastEnabler;
 import ve.ucv.ciens.ccg.nxtar.interfaces.Toaster;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Bitmap.CompressFormat;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.MulticastLock;
 import android.os.Bundle;
@@ -36,7 +41,7 @@ import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.badlogic.gdx.controllers.mappings.Ouya;
 
-public class MainActivity extends AndroidApplication implements Toaster, MulticastEnabler, CvCameraViewListener{
+public class MainActivity extends AndroidApplication implements Toaster, MulticastEnabler, CVProcessor{
 	private static final String TAG = "NXTAR_ANDROID_MAIN";
 	private static final String CLASS_NAME = MainActivity.class.getSimpleName();
 
@@ -46,12 +51,16 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 	private Context uiContext;
 	private boolean ocvOn;
 	private BaseLoaderCallback loaderCallback;
+	private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-	/*static{
-	    if (!OpenCVLoader.initDebug()){
+	static{
+		System.loadLibrary("cvproc");
+		/*if (!OpenCVLoader.initDebug()){
 	        Gdx.app.exit();
-	    }
-	}*/
+	    }*/
+	}
+
+	public native void getMarkerCodesAndLocations(int w, int h, byte[] yuv, int[] rgba, int[] codes);
 
 	@Override
 	public void onCreate(Bundle savedInstanceState){
@@ -137,26 +146,35 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 		}
 	}
 
-	/////////////////////////////////////////////
-	// CvCameraViewListener interface methods. //
-	/////////////////////////////////////////////
-	/**
-	 * <p>This method does nothing. It is here because it must be implemented in order to use OpenCV.</p>
-	 */
 	@Override
-	public void onCameraViewStarted(int width, int height){ }
+	public CVData processFrame(byte[] frame, int w, int h) {
+		if(ocvOn){
+			int codes[] = new int[15];
+			int [] pData = new int[w * h];
+			Bitmap mFrame = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+			Bitmap tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
+			ByteBuffer buffer = ByteBuffer.allocate(tFrame.getByteCount());
 
-	/**
-	 * <p>This method does nothing. It is here because it must be implemented in order to use OpenCV.</p>
-	 */
-	@Override
-	public void onCameraViewStopped(){ }
+			tFrame.copyPixelsToBuffer(buffer);
 
-	/**
-	 * <p>This method does nothing. It is here because it must be implemented in order to use OpenCV.</p>
-	 */
-	@Override
-	public Mat onCameraFrame(Mat inputFrame){
-		return null;
+			getMarkerCodesAndLocations(w, h, buffer.array(), pData, codes);
+
+			mFrame.setPixels(pData, 0, w, 0, 0, w, h);
+			mFrame.compress(CompressFormat.JPEG, 100, outputStream);
+
+			CVData data = new CVData();
+			data.outFrame = outputStream.toByteArray();
+			data.markerCodes = codes;
+
+			tFrame.recycle();
+			mFrame.recycle();
+			outputStream.reset();
+
+			return data;
+		}else{
+			Gdx.app.debug(TAG, CLASS_NAME + ".processFrame(): OpenCV is not ready or failed to load.");
+
+			return null;
+		}
 	}
 }
