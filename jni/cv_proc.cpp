@@ -19,7 +19,7 @@
 
 #include "marker.hpp"
 
-#define CAN_LOG
+//#define CAN_LOG
 
 extern "C"{
 #ifdef CAN_LOG
@@ -37,10 +37,8 @@ const char * TAG = "CVPROC_NATIVE";
 	JNIEXPORT void JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_getMarkerCodesAndLocations(
 		JNIEnv* env,
 		jobject jobj,
-		jint width,
-		jint height,
-		jbyteArray yuv,
-		jintArray bgra,
+		jlong addrMatIn,
+		jlong addrMatOut,
 		jintArray codes
 	){
 		char codeMsg[128];
@@ -48,19 +46,12 @@ const char * TAG = "CVPROC_NATIVE";
 
 		log(TAG, "Requesting native data.");
 
-		jbyte*  _yuv   = env->GetByteArrayElements(yuv, 0);
-		jint *  _bgra  = env->GetIntArrayElements(bgra, 0);
+		cv::Mat& myuv  = *(cv::Mat*)addrMatIn;
+		cv::Mat& mbgr  = *(cv::Mat*)addrMatOut;
 		jint *  _codes = env->GetIntArrayElements(codes, 0);
 
-		log(TAG, "Converting native data to OpenCV Mats.");
-
-		cv::Mat myuv(height + height/2, width, CV_8UC1, (unsigned char *)_yuv);
-		cv::Mat mbgra(height, width, CV_8UC4, (unsigned char *)_bgra);
-
 		log(TAG, "Converting color space before processing.");
-		cv::Mat mbgr(height, width, CV_8UC3);
-		cv::Mat gray;
-		cv::cvtColor(myuv, mbgr, CV_YUV420sp2BGR);
+		cv::cvtColor(myuv, mbgr, CV_RGB2BGR);
 
 		log(TAG, "Finding markers.");
 		nxtar::getAllMarkers(vCodes, mbgr);
@@ -73,14 +64,8 @@ const char * TAG = "CVPROC_NATIVE";
 		}
 		vCodes.clear();
 
-		log(TAG, "Converting color space after processing.");
-		cv::cvtColor(mbgr, gray, CV_BGR2GRAY);
-		cv::cvtColor(gray, mbgra, CV_GRAY2BGRA, 4);
-
 		log(TAG, "Releasing native data.");
 
 		env->ReleaseIntArrayElements(codes, _codes, 0);
-		env->ReleaseIntArrayElements(bgra, _bgra, 0);
-		env->ReleaseByteArrayElements(yuv, _yuv, 0);
 	}
 }

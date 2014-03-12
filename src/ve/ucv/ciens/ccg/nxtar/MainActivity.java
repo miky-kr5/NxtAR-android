@@ -16,11 +16,13 @@
 package ve.ucv.ciens.ccg.nxtar;
 
 import java.io.ByteArrayOutputStream;
-import java.nio.ByteBuffer;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
 
 import ve.ucv.ciens.ccg.nxtar.interfaces.CVProcessor;
 import ve.ucv.ciens.ccg.nxtar.interfaces.MulticastEnabler;
@@ -28,8 +30,8 @@ import ve.ucv.ciens.ccg.nxtar.interfaces.Toaster;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Bitmap.CompressFormat;
+import android.graphics.BitmapFactory;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.MulticastLock;
 import android.os.Bundle;
@@ -53,14 +55,14 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 	private BaseLoaderCallback loaderCallback;
 	private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-	static{
-		System.loadLibrary("cvproc");
-		/*if (!OpenCVLoader.initDebug()){
+	/*static{
+		if (!OpenCVLoader.initDebug()){
 	        Gdx.app.exit();
-	    }*/
-	}
+	    }
+		System.loadLibrary("cvproc");
+	}*/
 
-	public native void getMarkerCodesAndLocations(int w, int h, byte[] yuv, int[] rgba, int[] codes);
+	public native void getMarkerCodesAndLocations(long inMat, long outMat, int[] codes);
 
 	@Override
 	public void onCreate(Bundle savedInstanceState){
@@ -89,6 +91,7 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 			public void onManagerConnected(int status){
 				switch(status){
 				case LoaderCallbackInterface.SUCCESS:
+					System.loadLibrary("cvproc");
 					ocvOn = true;
 					break;
 				default:
@@ -150,16 +153,21 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 	public CVData processFrame(byte[] frame, int w, int h) {
 		if(ocvOn){
 			int codes[] = new int[15];
-			int [] pData = new int[w * h];
-			Bitmap mFrame = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-			Bitmap tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
-			ByteBuffer buffer = ByteBuffer.allocate(tFrame.getByteCount());
+			Bitmap tFrame, mFrame;
 
-			tFrame.copyPixelsToBuffer(buffer);
+			tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
 
-			getMarkerCodesAndLocations(w, h, buffer.array(), pData, codes);
+			Mat inImg = new Mat();
+			Mat outImg = new Mat();
+			Utils.bitmapToMat(tFrame, inImg);
 
-			mFrame.setPixels(pData, 0, w, 0, 0, w, h);
+			getMarkerCodesAndLocations(inImg.getNativeObjAddr(), outImg.getNativeObjAddr(), codes);
+
+			Mat temp = new Mat();
+			Imgproc.cvtColor(outImg, temp, Imgproc.COLOR_BGR2RGB);
+			
+			mFrame = Bitmap.createBitmap(temp.cols(), temp.rows(), Bitmap.Config.RGB_565);
+			Utils.matToBitmap(temp, mFrame);
 			mFrame.compress(CompressFormat.JPEG, 100, outputStream);
 
 			CVData data = new CVData();
