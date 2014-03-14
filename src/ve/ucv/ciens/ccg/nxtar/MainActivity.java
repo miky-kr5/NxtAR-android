@@ -15,16 +15,23 @@
  */
 package ve.ucv.ciens.ccg.nxtar;
 
+import java.io.ByteArrayOutputStream;
+
 import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
 
+import ve.ucv.ciens.ccg.nxtar.interfaces.CVProcessor;
 import ve.ucv.ciens.ccg.nxtar.interfaces.MulticastEnabler;
 import ve.ucv.ciens.ccg.nxtar.interfaces.Toaster;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
+import android.graphics.Bitmap;
+import android.graphics.Bitmap.CompressFormat;
+import android.graphics.BitmapFactory;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.MulticastLock;
 import android.os.Bundle;
@@ -36,7 +43,7 @@ import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.badlogic.gdx.controllers.mappings.Ouya;
 
-public class MainActivity extends AndroidApplication implements Toaster, MulticastEnabler, CvCameraViewListener{
+public class MainActivity extends AndroidApplication implements Toaster, MulticastEnabler, CVProcessor{
 	private static final String TAG = "NXTAR_ANDROID_MAIN";
 	private static final String CLASS_NAME = MainActivity.class.getSimpleName();
 
@@ -46,12 +53,16 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 	private Context uiContext;
 	private boolean ocvOn;
 	private BaseLoaderCallback loaderCallback;
+	private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
 	/*static{
-	    if (!OpenCVLoader.initDebug()){
+		if (!OpenCVLoader.initDebug()){
 	        Gdx.app.exit();
 	    }
+		System.loadLibrary("cvproc");
 	}*/
+
+	public native void getMarkerCodesAndLocations(long inMat, long outMat, int[] codes);
 
 	@Override
 	public void onCreate(Bundle savedInstanceState){
@@ -80,6 +91,7 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 			public void onManagerConnected(int status){
 				switch(status){
 				case LoaderCallbackInterface.SUCCESS:
+					System.loadLibrary("cvproc");
 					ocvOn = true;
 					break;
 				default:
@@ -137,26 +149,40 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 		}
 	}
 
-	/////////////////////////////////////////////
-	// CvCameraViewListener interface methods. //
-	/////////////////////////////////////////////
-	/**
-	 * <p>This method does nothing. It is here because it must be implemented in order to use OpenCV.</p>
-	 */
 	@Override
-	public void onCameraViewStarted(int width, int height){ }
+	public CVData processFrame(byte[] frame, int w, int h) {
+		if(ocvOn){
+			int codes[] = new int[15];
+			Bitmap tFrame, mFrame;
 
-	/**
-	 * <p>This method does nothing. It is here because it must be implemented in order to use OpenCV.</p>
-	 */
-	@Override
-	public void onCameraViewStopped(){ }
+			tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
 
-	/**
-	 * <p>This method does nothing. It is here because it must be implemented in order to use OpenCV.</p>
-	 */
-	@Override
-	public Mat onCameraFrame(Mat inputFrame){
-		return null;
+			Mat inImg = new Mat();
+			Mat outImg = new Mat();
+			Utils.bitmapToMat(tFrame, inImg);
+
+			getMarkerCodesAndLocations(inImg.getNativeObjAddr(), outImg.getNativeObjAddr(), codes);
+
+			Mat temp = new Mat();
+			Imgproc.cvtColor(outImg, temp, Imgproc.COLOR_BGR2RGB);
+			
+			mFrame = Bitmap.createBitmap(temp.cols(), temp.rows(), Bitmap.Config.RGB_565);
+			Utils.matToBitmap(temp, mFrame);
+			mFrame.compress(CompressFormat.JPEG, 100, outputStream);
+
+			CVData data = new CVData();
+			data.outFrame = outputStream.toByteArray();
+			data.markerCodes = codes;
+
+			tFrame.recycle();
+			mFrame.recycle();
+			outputStream.reset();
+
+			return data;
+		}else{
+			Gdx.app.debug(TAG, CLASS_NAME + ".processFrame(): OpenCV is not ready or failed to load.");
+
+			return null;
+		}
 	}
 }
