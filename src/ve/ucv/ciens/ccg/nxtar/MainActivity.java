@@ -165,7 +165,7 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 
 			Mat temp = new Mat();
 			Imgproc.cvtColor(outImg, temp, Imgproc.COLOR_BGR2RGB);
-			
+
 			mFrame = Bitmap.createBitmap(temp.cols(), temp.rows(), Bitmap.Config.RGB_565);
 			Utils.matToBitmap(temp, mFrame);
 			mFrame.compress(CompressFormat.JPEG, 100, outputStream);
