@@ -23,15 +23,10 @@
 
 extern "C"{
 #ifdef CAN_LOG
-
 #define log(TAG, MSG) (__android_log_write(ANDROID_LOG_DEBUG, TAG, MSG))
-
 const char * TAG = "CVPROC_NATIVE";
-
 #else
-
 #define log(TAG, MSG) (1 + 1)
-
 #endif
 
 	JNIEXPORT void JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_getMarkerCodesAndLocations(

@@ -51,16 +51,21 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 	private MulticastLock multicastLock;
 	private Handler uiHandler;
 	private Context uiContext;
-	private boolean ocvOn;
+	private static boolean ocvOn = false;
 	private BaseLoaderCallback loaderCallback;
 	private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-	/*static{
-		if (!OpenCVLoader.initDebug()){
-	        Gdx.app.exit();
-	    }
-		System.loadLibrary("cvproc");
-	}*/
+	static{
+		if(!OpenCVLoader.initDebug()){
+			Gdx.app.exit();
+		}
+		try{
+			System.loadLibrary("cvproc");
+			ocvOn = true;
+		}catch(UnsatisfiedLinkError u){
+			Gdx.app.exit();
+		}
+	}
 
 	public native void getMarkerCodesAndLocations(long inMat, long outMat, int[] codes);
 
@@ -68,7 +73,7 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 	public void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
 
-		ocvOn = false;
+		//ocvOn = false;
 
 		if(!Ouya.runningOnOuya){
 			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
@@ -93,6 +98,7 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 				case LoaderCallbackInterface.SUCCESS:
 					System.loadLibrary("cvproc");
 					ocvOn = true;
+					Toast.makeText(uiContext, R.string.ocv_success, Toast.LENGTH_LONG).show();
 					break;
 				default:
 					Toast.makeText(uiContext, R.string.ocv_failed, Toast.LENGTH_LONG).show();
@@ -102,7 +108,7 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 			}
 		};
 
-		OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_7, this, loaderCallback);
+		//OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_7, this, loaderCallback);
 		initialize(new NxtARCore(this), cfg);
 	}
 
