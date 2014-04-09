@@ -20,10 +20,22 @@
 #include <opencv2/opencv.hpp>
 
 namespace nxtar{
-    void getAllMarkers(std::vector<int> &, cv::Mat &);
-#ifdef DESKTOP
-    void getAllMarkers_d(std::vector<int> &, cv::Mat &);
-#endif
+
+class Marker;
+
+typedef std::vector<std::vector<cv::Point> > contours_vector;
+typedef std::vector<cv::Point2f>             points_vector;
+typedef std::vector<Marker>                  markers_vector;
+
+class Marker{
+public:
+	~Marker();
+	points_vector points;
+	int code;
+};
+
+void getAllMarkers(std::vector<int> &, cv::Mat &);
+void calibrateCamera(cv::Mat &);
 }
 
 #endif

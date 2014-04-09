@@ -57,17 +57,18 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 
 	static{
 		if(!OpenCVLoader.initDebug()){
-			Gdx.app.exit();
+			System.exit(1);
 		}
 		try{
 			System.loadLibrary("cvproc");
 			ocvOn = true;
 		}catch(UnsatisfiedLinkError u){
-			Gdx.app.exit();
+			System.exit(1);
 		}
 	}
 
 	public native void getMarkerCodesAndLocations(long inMat, long outMat, int[] codes);
+	public native void findCalibrationPattern(long inMat, long outMat);
 
 	@Override
 	public void onCreate(Bundle savedInstanceState){
@@ -167,7 +168,8 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 			Mat outImg = new Mat();
 			Utils.bitmapToMat(tFrame, inImg);
 
-			getMarkerCodesAndLocations(inImg.getNativeObjAddr(), outImg.getNativeObjAddr(), codes);
+			//getMarkerCodesAndLocations(inImg.getNativeObjAddr(), outImg.getNativeObjAddr(), codes);
+			findCalibrationPattern(inImg.getNativeObjAddr(), outImg.getNativeObjAddr());
 
 			Mat temp = new Mat();
 			Imgproc.cvtColor(outImg, temp, Imgproc.COLOR_BGR2RGB);
