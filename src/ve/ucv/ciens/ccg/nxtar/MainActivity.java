@@ -17,16 +17,13 @@ package ve.ucv.ciens.ccg.nxtar;
 
 import java.io.ByteArrayOutputStream;
 
-import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
 import ve.ucv.ciens.ccg.nxtar.interfaces.CVProcessor;
-import ve.ucv.ciens.ccg.nxtar.interfaces.MulticastEnabler;
-import ve.ucv.ciens.ccg.nxtar.interfaces.Toaster;
+import ve.ucv.ciens.ccg.nxtar.interfaces.OSFunctionalityProvider;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
@@ -43,38 +40,36 @@ import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.badlogic.gdx.controllers.mappings.Ouya;
 
-public class MainActivity extends AndroidApplication implements Toaster, MulticastEnabler, CVProcessor{
+public class MainActivity extends AndroidApplication implements OSFunctionalityProvider, CVProcessor{
 	private static final String TAG = "NXTAR_ANDROID_MAIN";
 	private static final String CLASS_NAME = MainActivity.class.getSimpleName();
+
+	private static boolean ocvOn = false;
 
 	private WifiManager wifiManager;
 	private MulticastLock multicastLock;
 	private Handler uiHandler;
 	private Context uiContext;
-	private static boolean ocvOn = false;
-	private BaseLoaderCallback loaderCallback;
 	private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
+	public native void getMarkerCodesAndLocations(long inMat, long outMat, int[] codes);
+	public native boolean findCalibrationPattern(long inMat, long outMat, float[] points);
+
 	static{
-		if(!OpenCVLoader.initDebug()){
-			System.exit(1);
-		}
+		if(!OpenCVLoader.initDebug())
+			ocvOn = false;
+
 		try{
 			System.loadLibrary("cvproc");
 			ocvOn = true;
 		}catch(UnsatisfiedLinkError u){
-			System.exit(1);
+			ocvOn = false;
 		}
 	}
-
-	public native void getMarkerCodesAndLocations(long inMat, long outMat, int[] codes);
-	public native void findCalibrationPattern(long inMat, long outMat);
 
 	@Override
 	public void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
-
-		//ocvOn = false;
 
 		if(!Ouya.runningOnOuya){
 			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
@@ -92,30 +87,12 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 		cfg.useCompass = false;
 		cfg.useWakelock = true;
 
-		loaderCallback = new BaseLoaderCallback(this){
-			@Override
-			public void onManagerConnected(int status){
-				switch(status){
-				case LoaderCallbackInterface.SUCCESS:
-					System.loadLibrary("cvproc");
-					ocvOn = true;
-					Toast.makeText(uiContext, R.string.ocv_success, Toast.LENGTH_LONG).show();
-					break;
-				default:
-					Toast.makeText(uiContext, R.string.ocv_failed, Toast.LENGTH_LONG).show();
-					Gdx.app.exit();
-					break;
-				}
-			}
-		};
-
-		//OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_7, this, loaderCallback);
 		initialize(new NxtARCore(this), cfg);
 	}
 
-	////////////////////////////////
-	// Toaster interface methods. //
-	////////////////////////////////
+	////////////////////////////////////////////////
+	// OSFunctionalityProvider interface methods. //
+	////////////////////////////////////////////////
 	@Override
 	public void showShortToast(final String msg){
 		uiHandler.post(new Runnable(){
@@ -136,9 +113,6 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 		});
 	}
 
-	/////////////////////////////////////////
-	// MulticastEnabler interface methods. //
-	/////////////////////////////////////////
 	@Override
 	public void enableMulticast(){
 		Gdx.app.log(TAG, CLASS_NAME + ".enableMulticast() :: Requesting multicast lock.");
@@ -156,8 +130,11 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 		}
 	}
 
+	////////////////////////////////////
+	// CVProcessor interface methods. //
+	////////////////////////////////////
 	@Override
-	public CVData processFrame(byte[] frame, int w, int h) {
+	public CVData findMarkersInFrame(byte[] frame, int w, int h) {
 		if(ocvOn){
 			int codes[] = new int[15];
 			Bitmap tFrame, mFrame;
@@ -168,8 +145,7 @@ public class MainActivity extends AndroidApplication implements Toaster, Multica
 			Mat outImg = new Mat();
 			Utils.bitmapToMat(tFrame, inImg);
 
-			//getMarkerCodesAndLocations(inImg.getNativeObjAddr(), outImg.getNativeObjAddr(), codes);
-			findCalibrationPattern(inImg.getNativeObjAddr(), outImg.getNativeObjAddr());
+			getMarkerCodesAndLocations(inImg.getNativeObjAddr(), outImg.getNativeObjAddr(), codes);
 
 			Mat temp = new Mat();
 			Imgproc.cvtColor(outImg, temp, Imgproc.COLOR_BGR2RGB);

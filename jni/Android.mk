@@ -4,7 +4,7 @@ include $(CLEAR_VARS)
 
 OPENCV_CAMERA_MODULES:=off
 OPENCV_LIB_TYPE:=STATIC
-include /home/miky/Escritorio/OpenCV-2.4.7-android-sdk/sdk/native/jni/OpenCV.mk
+include C:\Users\miguel.astor\Documents\OpenCV-2.4.8-android-sdk\sdk\native\jni\OpenCV.mk
 
 LOCAL_MODULE    := cvproc
 LOCAL_SRC_FILES := cv_proc.cpp marker.cpp
