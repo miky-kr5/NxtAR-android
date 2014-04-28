@@ -3,8 +3,9 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 OPENCV_CAMERA_MODULES:=off
-OPENCV_LIB_TYPE:=STATIC
+OPENCV_LIB_TYPE:=STATIC #SHARED
 include C:\Users\miguel.astor\Documents\OpenCV-2.4.8-android-sdk\sdk\native\jni\OpenCV.mk
+#include C:\NVPACK\OpenCV-2.4.5-Tegra-sdk-r2\sdk\native\jni\OpenCV-tegra3.mk
 
 LOCAL_MODULE    := cvproc
 LOCAL_SRC_FILES := cv_proc.cpp marker.cpp

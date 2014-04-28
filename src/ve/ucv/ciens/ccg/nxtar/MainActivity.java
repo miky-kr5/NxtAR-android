@@ -169,4 +169,10 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 			return null;
 		}
 	}
+
+	@Override
+	public void calibrateCamera() {
+		// TODO Auto-generated method stub
+		
+	}
 }
