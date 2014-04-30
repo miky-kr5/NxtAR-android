@@ -24,6 +24,7 @@ import org.opencv.imgproc.Imgproc;
 
 import ve.ucv.ciens.ccg.nxtar.interfaces.CVProcessor;
 import ve.ucv.ciens.ccg.nxtar.interfaces.OSFunctionalityProvider;
+import ve.ucv.ciens.ccg.nxtar.utils.ProjectConstants;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
@@ -45,6 +46,7 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	private static final String CLASS_NAME = MainActivity.class.getSimpleName();
 
 	private static boolean ocvOn = false;
+	private static Mat cameraMatrix, distortionCoeffs;
 
 	private WifiManager wifiManager;
 	private MulticastLock multicastLock;
@@ -70,6 +72,9 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	@Override
 	public void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
+
+		cameraMatrix = new Mat();
+		distortionCoeffs = new Mat();
 
 		if(!Ouya.runningOnOuya){
 			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
@@ -134,7 +139,7 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	// CVProcessor interface methods. //
 	////////////////////////////////////
 	@Override
-	public CVData findMarkersInFrame(byte[] frame, int w, int h) {
+	public CVMarkerData findMarkersInFrame(byte[] frame){
 		if(ocvOn){
 			int codes[] = new int[15];
 			Bitmap tFrame, mFrame;
@@ -147,14 +152,14 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 
 			getMarkerCodesAndLocations(inImg.getNativeObjAddr(), outImg.getNativeObjAddr(), codes);
 
-			Mat temp = new Mat();
-			Imgproc.cvtColor(outImg, temp, Imgproc.COLOR_BGR2RGB);
+			//Mat temp = new Mat();
+			//Imgproc.cvtColor(outImg, temp, Imgproc.COLOR_BGR2RGB);
 
-			mFrame = Bitmap.createBitmap(temp.cols(), temp.rows(), Bitmap.Config.RGB_565);
-			Utils.matToBitmap(temp, mFrame);
+			mFrame = Bitmap.createBitmap(outImg.cols(), outImg.rows(), Bitmap.Config.RGB_565);
+			Utils.matToBitmap(outImg, mFrame);
 			mFrame.compress(CompressFormat.JPEG, 100, outputStream);
 
-			CVData data = new CVData();
+			CVMarkerData data = new CVMarkerData();
 			data.outFrame = outputStream.toByteArray();
 			data.markerCodes = codes;
 
@@ -164,15 +169,78 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 
 			return data;
 		}else{
-			Gdx.app.debug(TAG, CLASS_NAME + ".processFrame(): OpenCV is not ready or failed to load.");
-
+			Gdx.app.debug(TAG, CLASS_NAME + ".findMarkersInFrame(): OpenCV is not ready or failed to load.");
 			return null;
 		}
 	}
 
 	@Override
-	public void calibrateCamera() {
-		// TODO Auto-generated method stub
-		
+	public CVCalibrationData findCalibrationPattern(byte[] frame){
+		if(ocvOn){
+			boolean found;
+			float points[] = new float[ProjectConstants.CALIBRATION_PATTERN_POINTS * 2];
+			Bitmap tFrame, mFrame;
+			Mat inImg = new Mat(), outImg = new Mat();
+			CVCalibrationData data = new CVCalibrationData();
+
+			// Decode the input frame and convert it to an OpenCV Matrix.
+			tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
+			Utils.bitmapToMat(tFrame, inImg);
+
+			// Attempt to find the calibration pattern in the input frame.
+			found = findCalibrationPattern(inImg.getNativeObjAddr(), outImg.getNativeObjAddr(), points);
+
+			// Encode the output image as a JPEG image.
+			mFrame = Bitmap.createBitmap(outImg.cols(), outImg.rows(), Bitmap.Config.RGB_565);
+			Utils.matToBitmap(outImg, mFrame);
+			mFrame.compress(CompressFormat.JPEG, 100, outputStream);
+
+			// Prepare the output data structure.
+			data.outFrame = outputStream.toByteArray();
+			data.calibrationPoints = found ? points : null;
+
+			// Clean up memory.
+			tFrame.recycle();
+			mFrame.recycle();
+			outputStream.reset();
+
+			return data;
+		}else{
+			Gdx.app.debug(TAG, CLASS_NAME + ".findCalibrationPattern(): OpenCV is not ready or failed to load.");
+			return null;
+		}
+	}
+	@Override
+	public byte[] undistortFrame(byte[] frame){
+		if(ocvOn){
+			byte undistortedFrame[];
+			Bitmap tFrame, mFrame;
+			Mat inImg = new Mat(), outImg = new Mat();
+
+			// Decode the input frame and convert it to an OpenCV Matrix.
+			tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
+			Utils.bitmapToMat(tFrame, inImg);
+
+			// Apply the undistort correction to the input frame.
+			Imgproc.undistort(inImg, outImg, cameraMatrix, distortionCoeffs);
+
+			// Encode the output image as a JPEG image.
+			mFrame = Bitmap.createBitmap(outImg.cols(), outImg.rows(), Bitmap.Config.RGB_565);
+			Utils.matToBitmap(outImg, mFrame);
+			mFrame.compress(CompressFormat.JPEG, 100, outputStream);
+
+			// Prepare the return frame.
+			undistortedFrame = outputStream.toByteArray();
+
+			// Clean up memory.
+			tFrame.recycle();
+			mFrame.recycle();
+			outputStream.reset();
+
+			return undistortedFrame;
+		}else{
+			Gdx.app.debug(TAG, CLASS_NAME + ".undistortFrame(): OpenCV is not ready or failed to load.");
+			return null;
+		}
 	}
 }

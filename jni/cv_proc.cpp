@@ -23,12 +23,13 @@
 
 #ifdef CAN_LOG
 #define log(TAG, MSG) (__android_log_write(ANDROID_LOG_DEBUG, TAG, MSG))
-const char * TAG = "CVPROC_NATIVE";
 #else
 #define log(TAG, MSG) (1 + 1)
 #endif
 
 extern "C"{
+
+const char * TAG = "CVPROC_NATIVE";
 
 JNIEXPORT void JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_getMarkerCodesAndLocations(JNIEnv* env, jobject jobj, jlong addrMatIn, jlong addrMatOut, jintArray codes){
 	char codeMsg[128];
@@ -39,12 +40,13 @@ JNIEXPORT void JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_getMarkerCodesAn
 	cv::Mat& myuv  = *(cv::Mat*)addrMatIn;
 	cv::Mat& mbgr  = *(cv::Mat*)addrMatOut;
 	jint * _codes = env->GetIntArrayElements(codes, 0);
+	cv::Mat temp;
 
 	log(TAG, "getMarkerCodesAndLocations(): Converting color space before processing.");
-	cv::cvtColor(myuv, mbgr, CV_RGB2BGR);
+	cv::cvtColor(myuv, temp, CV_RGB2BGR);
 
 	log(TAG, "getMarkerCodesAndLocations(): Finding markers.");
-	nxtar::getAllMarkers(vCodes, mbgr);
+	nxtar::getAllMarkers(vCodes, temp);
 
 	log(TAG, "getMarkerCodesAndLocations(): Copying marker codes.");
 	for(int i = 0; i < vCodes.size() && i < 15; i++){
@@ -52,8 +54,9 @@ JNIEXPORT void JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_getMarkerCodesAn
 	}
 	vCodes.clear();
 
-	log(TAG, "getMarkerCodesAndLocations(): Releasing native data.");
+	cv::cvtColor(temp, mbgr, CV_BGR2RGB);
 
+	log(TAG, "getMarkerCodesAndLocations(): Releasing native data.");
 	env->ReleaseIntArrayElements(codes, _codes, 0);
 }
 
@@ -66,18 +69,21 @@ JNIEXPORT jboolean JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_findCalibrat
 	cv::Mat& myuv  = *(cv::Mat*)addrMatIn;
 	cv::Mat& mbgr  = *(cv::Mat*)addrMatOut;
 	jfloat * _points = env->GetFloatArrayElements(points, 0);
+	cv::Mat temp;
 
 	log(TAG, "findCalibrationPattern(): Converting color space before processing.");
-	cv::cvtColor(myuv, mbgr, CV_RGB2BGR);
+	cv::cvtColor(myuv, temp, CV_RGB2BGR);
 
 	log(TAG, "findCalibrationPattern(): Finding calibration pattern.");
-	found = nxtar::findCalibrationPattern(v_points, mbgr);
+	found = nxtar::findCalibrationPattern(v_points, temp);
 
 	log(TAG, "findCalibrationPattern(): Copying calibration points.");
 	for(size_t i = 0, p = 0; i < v_points.size(); i++, p += 2){
 		_points[p] = (jfloat)v_points[i].x;
 		_points[p + 1] = (jfloat)v_points[i].y;
 	}
+
+	cv::cvtColor(temp, mbgr, CV_BGR2RGB);
 
 	log(TAG, "findCalibrationPattern(): Releasing native data.");
 	env->ReleaseFloatArrayElements(points, _points, 0);
