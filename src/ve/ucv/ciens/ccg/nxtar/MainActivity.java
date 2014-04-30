@@ -17,6 +17,8 @@ package ve.ucv.ciens.ccg.nxtar;
 
 import java.io.ByteArrayOutputStream;
 
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
@@ -45,6 +47,7 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	private static final String TAG = "NXTAR_ANDROID_MAIN";
 	private static final String CLASS_NAME = MainActivity.class.getSimpleName();
 
+	private static final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 	private static boolean ocvOn = false;
 	private static Mat cameraMatrix, distortionCoeffs;
 
@@ -52,20 +55,23 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	private MulticastLock multicastLock;
 	private Handler uiHandler;
 	private Context uiContext;
-	private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+	private BaseLoaderCallback loaderCallback;
 
 	public native void getMarkerCodesAndLocations(long inMat, long outMat, int[] codes);
 	public native boolean findCalibrationPattern(long inMat, long outMat, float[] points);
+	public native double calibrateCameraParameters(long camMat, long distMat, long frame, float[] calibrationPoints);
 
 	static{
-		if(!OpenCVLoader.initDebug())
-			ocvOn = false;
+		if(Ouya.runningOnOuya){
+			if(!OpenCVLoader.initDebug())
+				ocvOn = false;
 
-		try{
-			System.loadLibrary("cvproc");
-			ocvOn = true;
-		}catch(UnsatisfiedLinkError u){
-			ocvOn = false;
+			try{
+				System.loadLibrary("cvproc");
+				ocvOn = true;
+			}catch(UnsatisfiedLinkError u){
+				ocvOn = false;
+			}
 		}
 	}
 
@@ -91,6 +97,26 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 		cfg.useAccelerometer = false;
 		cfg.useCompass = false;
 		cfg.useWakelock = true;
+
+		if(!ocvOn && !Ouya.runningOnOuya){
+			loaderCallback = new BaseLoaderCallback(this){
+				@Override
+				public void onManagerConnected(int status){
+					switch(status){
+					case LoaderCallbackInterface.SUCCESS:
+						System.loadLibrary("cvproc");
+						ocvOn = true;
+						break;
+					default:
+						Toast.makeText(uiContext, R.string.ocv_failed, Toast.LENGTH_LONG).show();
+						Gdx.app.exit();
+						break;
+					}
+				}
+			};
+
+			OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_8, this, loaderCallback);
+		}
 
 		initialize(new NxtARCore(this), cfg);
 	}
@@ -138,6 +164,10 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	////////////////////////////////////
 	// CVProcessor interface methods. //
 	////////////////////////////////////
+
+	/**
+	 * 
+	 */
 	@Override
 	public CVMarkerData findMarkersInFrame(byte[] frame){
 		if(ocvOn){
@@ -174,6 +204,9 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 		}
 	}
 
+	/**
+	 * 
+	 */
 	@Override
 	public CVCalibrationData findCalibrationPattern(byte[] frame){
 		if(ocvOn){
@@ -210,6 +243,10 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 			return null;
 		}
 	}
+
+	/**
+	 * 
+	 */
 	@Override
 	public byte[] undistortFrame(byte[] frame){
 		if(ocvOn){
@@ -241,6 +278,34 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 		}else{
 			Gdx.app.debug(TAG, CLASS_NAME + ".undistortFrame(): OpenCV is not ready or failed to load.");
 			return null;
+		}
+	}
+
+	/**
+	 * 
+	 */
+	@Override
+	public void calibrateCamera(float[][] calibrationSamples, byte[] frame) {
+		if(ocvOn){
+			float[] calibrationPoints = new float[ProjectConstants.CALIBRATION_PATTERN_POINTS * 2 * ProjectConstants.CALIBRATION_SAMPLES];
+			int w = ProjectConstants.CALIBRATION_PATTERN_POINTS * 2;
+			Bitmap tFrame;
+			Mat inImg = new Mat();
+
+			for(int i = 0; i < ProjectConstants.CALIBRATION_SAMPLES; i++){
+				for(int j = 0, p = 0; j < ProjectConstants.CALIBRATION_PATTERN_POINTS; j++, p += 2){
+					calibrationPoints[p + (w * i)] = calibrationSamples[i][p];
+					calibrationPoints[(p + 1) + (w * i)] = calibrationSamples[i][p + 1];
+				}
+			}
+
+			tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
+			Utils.bitmapToMat(tFrame, inImg);
+
+			calibrateCameraParameters(cameraMatrix.getNativeObjAddr(), distortionCoeffs.getNativeObjAddr(), inImg.getNativeObjAddr(), calibrationPoints);
+
+		}else{
+			Gdx.app.debug(TAG, CLASS_NAME + ".calibrateCamera(): OpenCV is not ready or failed to load.");
 		}
 	}
 }

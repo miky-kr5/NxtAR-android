@@ -16,10 +16,13 @@
 #include <jni.h>
 #include <android/log.h>
 #include <stdio.h>
+#include <stddef.h>
 
 #include "marker.hpp"
 
-//#define CAN_LOG
+#define CAN_LOG
+#define POINTS_PER_CALIBRATION_SAMPLE 54
+#define CALIBRATION_SAMPLES 10
 
 #ifdef CAN_LOG
 #define log(TAG, MSG) (__android_log_write(ANDROID_LOG_DEBUG, TAG, MSG))
@@ -27,10 +30,13 @@
 #define log(TAG, MSG) (1 + 1)
 #endif
 
-extern "C"{
-
 const char * TAG = "CVPROC_NATIVE";
 
+extern "C"{
+
+/**
+ *
+ */
 JNIEXPORT void JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_getMarkerCodesAndLocations(JNIEnv* env, jobject jobj, jlong addrMatIn, jlong addrMatOut, jintArray codes){
 	char codeMsg[128];
 	std::vector<int> vCodes;
@@ -60,6 +66,9 @@ JNIEXPORT void JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_getMarkerCodesAn
 	env->ReleaseIntArrayElements(codes, _codes, 0);
 }
 
+/**
+ *
+ */
 JNIEXPORT jboolean JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_findCalibrationPattern(JNIEnv* env, jobject jobj, jlong addrMatIn, jlong addrMatOut, jfloatArray points){
 	nxtar::points_vector v_points;
 	bool found;
@@ -89,6 +98,49 @@ JNIEXPORT jboolean JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_findCalibrat
 	env->ReleaseFloatArrayElements(points, _points, 0);
 
 	return (jboolean)found;
+}
+
+/**
+ *
+ */
+JNIEXPORT jdouble JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_calibrateCameraParameters(JNIEnv* env, jobject jobj, jlong addrMatIn, jlong addrMatOut, jlong addrMatFrame, jfloatArray points){
+	double error;
+	std::vector<nxtar::points_vector> imagePoints;
+
+	// Get native object addresses.
+	log(TAG, "calibrateCameraParameters(): Requesting native data.");
+	cv::Mat& mIn  = *(cv::Mat*)addrMatIn;
+	cv::Mat& mOut  = *(cv::Mat*)addrMatOut;
+	cv::Mat& mFrame  = *(cv::Mat*)addrMatFrame;
+	jfloat * _points = env->GetFloatArrayElements(points, 0);
+
+	// Prepare the image points data structure.
+	log(TAG, "calibrateCameraParameters(): Preparing image points.");
+	for(int i = 0; i < CALIBRATION_SAMPLES; i++){
+		nxtar::points_vector tempVector;
+		for(int j = 0, p = 0; j < POINTS_PER_CALIBRATION_SAMPLE; j++, p += 2){
+			tempVector.push_back(cv::Point2f(_points[p], _points[p + 1]));
+		}
+		imagePoints.push_back(tempVector);
+	}
+
+	// Get the camera parameters.
+	log(TAG, "calibrateCameraParameters(): Getting camera parameters.");
+	error = nxtar::getCameraParameters(mIn, mOut, imagePoints, mFrame.size());
+
+	// Clear the image points.
+	log(TAG, "calibrateCameraParameters(): Clearing memory.");
+	for(int i = 0; i < imagePoints.size(); i++){
+		imagePoints[i].clear();
+	}
+	imagePoints.clear();
+
+	// Release native memory.
+	log(TAG, "calibrateCameraParameters(): Releasing native data.");
+	env->ReleaseFloatArrayElements(points, _points, 0);
+
+	// Return the calibration error as calculated by OpenCV.
+	return error;
 }
 
 }

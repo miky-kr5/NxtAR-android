@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <utility>
 #include <limits>
+#include <stddef.h>
 #ifdef DESKTOP
 #include <iostream>
 #endif
@@ -394,9 +395,9 @@ cv::Mat rotate(cv::Mat in){
 	cv::Mat out;
 
 	in.copyTo(out);
-	for (int i=0;i<in.rows;i++){
-		for (int j=0;j<in.cols;j++){
-			out.at<uchar>(i,j)=in.at<uchar>(in.cols-j-1,i);
+	for (int i = 0; i < in.rows; i++){
+		for (int j = 0; j < in.cols; j++){
+			out.at<uchar>(i, j)=in.at<uchar>(in.cols-j - 1, i);
 		}
 	}
 
