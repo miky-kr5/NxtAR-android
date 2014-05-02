@@ -56,6 +56,7 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	private Handler uiHandler;
 	private Context uiContext;
 	private BaseLoaderCallback loaderCallback;
+	private boolean cameraCalibrated;
 
 	public native void getMarkerCodesAndLocations(long inMat, long outMat, int[] codes);
 	public native boolean findCalibrationPattern(long inMat, long outMat, float[] points);
@@ -79,8 +80,7 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	public void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
 
-		cameraMatrix = new Mat();
-		distortionCoeffs = new Mat();
+		cameraCalibrated = false;
 
 		if(!Ouya.runningOnOuya){
 			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
@@ -92,13 +92,7 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 		uiContext = this;
 		wifiManager = (WifiManager)getSystemService(Context.WIFI_SERVICE);
 
-		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
-		cfg.useGL20 = true;
-		cfg.useAccelerometer = false;
-		cfg.useCompass = false;
-		cfg.useWakelock = true;
-
-		if(!ocvOn && !Ouya.runningOnOuya){
+		if(!Ouya.runningOnOuya){
 			loaderCallback = new BaseLoaderCallback(this){
 				@Override
 				public void onManagerConnected(int status){
@@ -106,6 +100,8 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 					case LoaderCallbackInterface.SUCCESS:
 						System.loadLibrary("cvproc");
 						ocvOn = true;
+						cameraMatrix = new Mat();
+						distortionCoeffs = new Mat();
 						break;
 					default:
 						Toast.makeText(uiContext, R.string.ocv_failed, Toast.LENGTH_LONG).show();
@@ -115,8 +111,21 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 				}
 			};
 
-			OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_8, this, loaderCallback);
+			OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_7, this, loaderCallback);
+		}else{
+			if(!ocvOn){
+				Toast.makeText(uiContext, R.string.ocv_failed, Toast.LENGTH_LONG).show();
+			}else{
+				cameraMatrix = new Mat();
+				distortionCoeffs = new Mat();
+			}
 		}
+
+		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
+		cfg.useGL20 = true;
+		cfg.useAccelerometer = false;
+		cfg.useCompass = false;
+		cfg.useWakelock = true;
 
 		initialize(new NxtARCore(this), cfg);
 	}
@@ -166,7 +175,15 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	////////////////////////////////////
 
 	/**
+	 * <p>Implementation of the findMarkersInFrame method.</p>
 	 * 
+	 * <p>This implementation finds up to 15 markers in the input
+	 * image and returns their codes and locations in the CVMarkerData
+	 * structure. The markers are higlihted in the input image.</p>
+	 * 
+	 * @param frame The JPEG encoded input image.
+	 * @return A data structure containing the processed output image, the
+	 * detected marker codes and their respective locations.
 	 */
 	@Override
 	public CVMarkerData findMarkersInFrame(byte[] frame){
@@ -303,9 +320,18 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 			Utils.bitmapToMat(tFrame, inImg);
 
 			calibrateCameraParameters(cameraMatrix.getNativeObjAddr(), distortionCoeffs.getNativeObjAddr(), inImg.getNativeObjAddr(), calibrationPoints);
+			cameraCalibrated = true;
 
 		}else{
 			Gdx.app.debug(TAG, CLASS_NAME + ".calibrateCamera(): OpenCV is not ready or failed to load.");
 		}
+	}
+	
+	/**
+	 * 
+	 */
+	@Override
+	public boolean cameraIsCalibrated() {
+		return ocvOn && cameraCalibrated;
 	}
 }

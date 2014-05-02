@@ -20,14 +20,14 @@
 
 #include "marker.hpp"
 
-#define CAN_LOG
+//#define CAN_LOG
 #define POINTS_PER_CALIBRATION_SAMPLE 54
 #define CALIBRATION_SAMPLES 10
 
 #ifdef CAN_LOG
 #define log(TAG, MSG) (__android_log_write(ANDROID_LOG_DEBUG, TAG, MSG))
 #else
-#define log(TAG, MSG) (1 + 1)
+#define log(TAG, MSG) ;
 #endif
 
 const char * TAG = "CVPROC_NATIVE";
