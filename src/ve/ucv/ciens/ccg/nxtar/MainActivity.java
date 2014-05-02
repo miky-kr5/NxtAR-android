@@ -319,14 +319,17 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 			tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
 			Utils.bitmapToMat(tFrame, inImg);
 
-			calibrateCameraParameters(cameraMatrix.getNativeObjAddr(), distortionCoeffs.getNativeObjAddr(), inImg.getNativeObjAddr(), calibrationPoints);
+			double error = calibrateCameraParameters(cameraMatrix.getNativeObjAddr(), distortionCoeffs.getNativeObjAddr(), inImg.getNativeObjAddr(), calibrationPoints);
+
+			Gdx.app.log(TAG, CLASS_NAME + "calibrateCamera(): calibrateCameraParameters retured " + Double.toString(error));
+
 			cameraCalibrated = true;
 
 		}else{
 			Gdx.app.debug(TAG, CLASS_NAME + ".calibrateCamera(): OpenCV is not ready or failed to load.");
 		}
 	}
-	
+
 	/**
 	 * 
 	 */
