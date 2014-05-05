@@ -43,6 +43,12 @@ import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.badlogic.gdx.controllers.mappings.Ouya;
 
+/**
+ * <p>The main activity of the application.</p>
+ * 
+ * <p>Provides operating system services to the LibGDX platform
+ * independant code, and handles OpenCV initialization and api calls.</p>
+ */
 public class MainActivity extends AndroidApplication implements OSFunctionalityProvider, CVProcessor{
 	private static final String TAG = "NXTAR_ANDROID_MAIN";
 	private static final String CLASS_NAME = MainActivity.class.getSimpleName();
@@ -62,6 +68,10 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	public native boolean findCalibrationPattern(long inMat, long outMat, float[] points);
 	public native double calibrateCameraParameters(long camMat, long distMat, long frame, float[] calibrationPoints);
 
+	/**
+	 * <p>Static block. Tries to load OpenCV and the native method implementations
+	 * statically if running on an OUYA device.</p> 
+	 */
 	static{
 		if(Ouya.runningOnOuya){
 			if(!OpenCVLoader.initDebug())
@@ -76,28 +86,41 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 		}
 	}
 
+	/**
+	 * <p>Initializes this activity</p>
+	 * 
+	 * <p>This method handles the initialization of LibGDX and OpenCV. OpenCV is
+	 * loaded the asynchronous method if the devices is not an OUYA console.
+	 */
 	@Override
 	public void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
 
 		cameraCalibrated = false;
 
+		// Set screen orientation. Portrait on mobile devices, landscape on OUYA.
 		if(!Ouya.runningOnOuya){
 			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 		}else{
 			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 		}
 
+		// Set up the Android related variables.
 		uiHandler = new Handler();
 		uiContext = this;
 		wifiManager = (WifiManager)getSystemService(Context.WIFI_SERVICE);
 
+		// Attempt to initialize OpenCV.
 		if(!Ouya.runningOnOuya){
+			// If running on a moble device, use the asynchronous method aided
+			// by the OpenCV Manager app.
 			loaderCallback = new BaseLoaderCallback(this){
 				@Override
 				public void onManagerConnected(int status){
 					switch(status){
 					case LoaderCallbackInterface.SUCCESS:
+						// If successfully initialized then load the native method implementations and
+						// initialize the static matrices.
 						System.loadLibrary("cvproc");
 						ocvOn = true;
 						cameraMatrix = new Mat();
@@ -105,34 +128,46 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 						break;
 					default:
 						Toast.makeText(uiContext, R.string.ocv_failed, Toast.LENGTH_LONG).show();
-						Gdx.app.exit();
+						ocvOn = false;
 						break;
 					}
 				}
 			};
 
+			// Launch the asynchronous initializer.
 			OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_7, this, loaderCallback);
+
 		}else{
-			if(!ocvOn){
-				Toast.makeText(uiContext, R.string.ocv_failed, Toast.LENGTH_LONG).show();
-			}else{
+			// If running on an OUYA device.
+			if(ocvOn){
+				// If OpenCV loaded successfully then initialize the native matrices.
 				cameraMatrix = new Mat();
 				distortionCoeffs = new Mat();
+			}else{
+				Toast.makeText(uiContext, R.string.ocv_failed, Toast.LENGTH_LONG).show();
 			}
 		}
 
+		// Configure LibGDX.
 		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
 		cfg.useGL20 = true;
 		cfg.useAccelerometer = false;
 		cfg.useCompass = false;
 		cfg.useWakelock = true;
 
+		// Launch the LibGDX core game class.
 		initialize(new NxtARCore(this), cfg);
 	}
 
 	////////////////////////////////////////////////
 	// OSFunctionalityProvider interface methods. //
 	////////////////////////////////////////////////
+
+	/**
+	 * <p>Implementation of the showShortToast method.</p>
+	 * 
+	 * <p>Shows a short message on screen using Android's toast mechanism.</p>
+	 */
 	@Override
 	public void showShortToast(final String msg){
 		uiHandler.post(new Runnable(){
@@ -143,6 +178,11 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 		});
 	}
 
+	/**
+	 * <p>Implementation of the showLongToast method.</p>
+	 * 
+	 * <p>Shows a long message on screen using Android's toast mechanism.</p>
+	 */
 	@Override
 	public void showLongToast(final String msg){
 		uiHandler.post(new Runnable(){
@@ -153,6 +193,11 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 		});
 	}
 
+	/**
+	 * <p>Implementation of the enableMulticast method.</p>
+	 * 
+	 * <p>Enable the transmision and reception of multicast network messages.</p>
+	 */
 	@Override
 	public void enableMulticast(){
 		Gdx.app.log(TAG, CLASS_NAME + ".enableMulticast() :: Requesting multicast lock.");
@@ -161,6 +206,11 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 		multicastLock.acquire();
 	}
 
+	/**
+	 * <p>Implementation of the disableMulticast method.</p>
+	 * 
+	 * <p>Disables the transmision and reception of multicast network messages.</p>
+	 */
 	@Override
 	public void disableMulticast(){
 		Gdx.app.log(TAG, CLASS_NAME + ".disableMulticast() :: Releasing multicast lock.");
@@ -190,31 +240,33 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 		if(ocvOn){
 			int codes[] = new int[15];
 			Bitmap tFrame, mFrame;
-
-			tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
-
 			Mat inImg = new Mat();
 			Mat outImg = new Mat();
+
+			// Decode the input image and convert it to an OpenCV matrix.
+			tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
 			Utils.bitmapToMat(tFrame, inImg);
 
+			// Find up to 15 markers in the input image.
 			getMarkerCodesAndLocations(inImg.getNativeObjAddr(), outImg.getNativeObjAddr(), codes);
 
-			//Mat temp = new Mat();
-			//Imgproc.cvtColor(outImg, temp, Imgproc.COLOR_BGR2RGB);
-
+			// Encode the output image as a JPEG image.
 			mFrame = Bitmap.createBitmap(outImg.cols(), outImg.rows(), Bitmap.Config.RGB_565);
 			Utils.matToBitmap(outImg, mFrame);
 			mFrame.compress(CompressFormat.JPEG, 100, outputStream);
 
+			// Create the output data structure.
 			CVMarkerData data = new CVMarkerData();
 			data.outFrame = outputStream.toByteArray();
 			data.markerCodes = codes;
 
+			// Clean up memory.
 			tFrame.recycle();
 			mFrame.recycle();
 			outputStream.reset();
 
 			return data;
+
 		}else{
 			Gdx.app.debug(TAG, CLASS_NAME + ".findMarkersInFrame(): OpenCV is not ready or failed to load.");
 			return null;
@@ -222,7 +274,17 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	}
 
 	/**
+	 * <p>Implementation of the findCalibrationPattern method.</p>
 	 * 
+	 * <p>Attempts to detect a checkerboard calibration pattern in the input image.
+	 * If the pattenr is found the method returns an image with the pattern
+	 * highlighted and the spatial location of the calibration points in the 
+	 * output data structure.</p>
+	 * 
+	 * @param frame The JPEG encoded input image.
+	 * @return A data structure containing the processed output image and the
+	 * location of the calibration points. If the pattern was not found, the returnd
+	 * calibration points array is null.
 	 */
 	@Override
 	public CVCalibrationData findCalibrationPattern(byte[] frame){
@@ -255,6 +317,7 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 			outputStream.reset();
 
 			return data;
+
 		}else{
 			Gdx.app.debug(TAG, CLASS_NAME + ".findCalibrationPattern(): OpenCV is not ready or failed to load.");
 			return null;
@@ -262,44 +325,9 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	}
 
 	/**
+	 * <p>Implementation of the calibrateCamera method.</p>
 	 * 
-	 */
-	@Override
-	public byte[] undistortFrame(byte[] frame){
-		if(ocvOn){
-			byte undistortedFrame[];
-			Bitmap tFrame, mFrame;
-			Mat inImg = new Mat(), outImg = new Mat();
-
-			// Decode the input frame and convert it to an OpenCV Matrix.
-			tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
-			Utils.bitmapToMat(tFrame, inImg);
-
-			// Apply the undistort correction to the input frame.
-			Imgproc.undistort(inImg, outImg, cameraMatrix, distortionCoeffs);
-
-			// Encode the output image as a JPEG image.
-			mFrame = Bitmap.createBitmap(outImg.cols(), outImg.rows(), Bitmap.Config.RGB_565);
-			Utils.matToBitmap(outImg, mFrame);
-			mFrame.compress(CompressFormat.JPEG, 100, outputStream);
-
-			// Prepare the return frame.
-			undistortedFrame = outputStream.toByteArray();
-
-			// Clean up memory.
-			tFrame.recycle();
-			mFrame.recycle();
-			outputStream.reset();
-
-			return undistortedFrame;
-		}else{
-			Gdx.app.debug(TAG, CLASS_NAME + ".undistortFrame(): OpenCV is not ready or failed to load.");
-			return null;
-		}
-	}
-
-	/**
-	 * 
+	 * <p>Obtains the intrinsic camera parameters necesary for calibration.</p>
 	 */
 	@Override
 	public void calibrateCamera(float[][] calibrationSamples, byte[] frame) {
@@ -309,6 +337,8 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 			Bitmap tFrame;
 			Mat inImg = new Mat();
 
+			// Save the calibration points on a one dimensional array for easier parameter passing
+			// to the native code.
 			for(int i = 0; i < ProjectConstants.CALIBRATION_SAMPLES; i++){
 				for(int j = 0, p = 0; j < ProjectConstants.CALIBRATION_PATTERN_POINTS; j++, p += 2){
 					calibrationPoints[p + (w * i)] = calibrationSamples[i][p];
@@ -316,13 +346,13 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 				}
 			}
 
+			// Decode the input image and convert it to an OpenCV matrix.
 			tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
 			Utils.bitmapToMat(tFrame, inImg);
 
+			// Attempt to obtain the camera parameters.
 			double error = calibrateCameraParameters(cameraMatrix.getNativeObjAddr(), distortionCoeffs.getNativeObjAddr(), inImg.getNativeObjAddr(), calibrationPoints);
-
 			Gdx.app.log(TAG, CLASS_NAME + "calibrateCamera(): calibrateCameraParameters retured " + Double.toString(error));
-
 			cameraCalibrated = true;
 
 		}else{
@@ -330,8 +360,59 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 		}
 	}
 
+
 	/**
+	 * <p>Implementation of the undistorFrame method.</p>
 	 * 
+	 * <p>Removes camera lens distortion from the input image using the
+	 * camera parameters obtained by the calibrateCamera method.</p>
+	 * 
+	 * @return A JPEG encoded image that is the input image after distortion correction. If the
+	 * camera has not been calibrated or OpenCV failed to load returns null.
+	 */
+	@Override
+	public byte[] undistortFrame(byte[] frame){
+		if(ocvOn){
+			if(cameraCalibrated){
+				byte undistortedFrame[];
+				Bitmap tFrame, mFrame;
+				Mat inImg = new Mat(), outImg = new Mat();
+
+				// Decode the input frame and convert it to an OpenCV Matrix.
+				tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
+				Utils.bitmapToMat(tFrame, inImg);
+
+				// Apply the undistort correction to the input frame.
+				Imgproc.undistort(inImg, outImg, cameraMatrix, distortionCoeffs);
+
+				// Encode the output image as a JPEG image.
+				mFrame = Bitmap.createBitmap(outImg.cols(), outImg.rows(), Bitmap.Config.RGB_565);
+				Utils.matToBitmap(outImg, mFrame);
+				mFrame.compress(CompressFormat.JPEG, 100, outputStream);
+
+				// Prepare the return frame.
+				undistortedFrame = outputStream.toByteArray();
+
+				// Clean up memory.
+				tFrame.recycle();
+				mFrame.recycle();
+				outputStream.reset();
+
+				return undistortedFrame;
+
+			}else{
+				Gdx.app.debug(TAG, CLASS_NAME + ".undistortFrame(): Camera has not been calibrated.");
+				return null;
+			}
+		}else{
+			Gdx.app.debug(TAG, CLASS_NAME + ".undistortFrame(): OpenCV is not ready or failed to load.");
+			return null;
+		}
+	}
+
+	/**
+	 * <p>Indicates if OpenCV has been sucessfully initialized and used
+	 * to obtain the camera parameters for calibration.</p>
 	 */
 	@Override
 	public boolean cameraIsCalibrated() {
