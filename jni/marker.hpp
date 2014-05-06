@@ -51,6 +51,6 @@ bool findCalibrationPattern(points_vector &, cv::Mat &);
  */
 double getCameraParameters(cv::Mat &, cv::Mat &, std::vector<points_vector> &, cv::Size);
 
-}
+} // namespace nxtar
 
-#endif
+#endif // MARKER_HPP

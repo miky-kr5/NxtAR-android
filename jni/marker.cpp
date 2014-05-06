@@ -500,4 +500,4 @@ float perimeter(points_vector & p){
 Marker::~Marker(){
 	points.clear();
 }
-}
+} // namespace nxtar

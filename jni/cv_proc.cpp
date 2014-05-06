@@ -143,4 +143,4 @@ JNIEXPORT jdouble JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_calibrateCame
 	return error;
 }
 
-}
+} // extern "C"
