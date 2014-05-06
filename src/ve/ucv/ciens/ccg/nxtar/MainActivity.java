@@ -50,23 +50,95 @@ import com.badlogic.gdx.controllers.mappings.Ouya;
  * independant code, and handles OpenCV initialization and api calls.</p>
  */
 public class MainActivity extends AndroidApplication implements OSFunctionalityProvider, CVProcessor{
+	/**
+	 * Tag used for logging.
+	 */
 	private static final String TAG = "NXTAR_ANDROID_MAIN";
+
+	/**
+	 * Class name used for logging.
+	 */
 	private static final String CLASS_NAME = MainActivity.class.getSimpleName();
 
+	/**
+	 * Output stream used to codify images as JPEG using Android's Bitmap class.
+	 */
 	private static final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-	private static boolean ocvOn = false;
-	private static Mat cameraMatrix, distortionCoeffs;
 
+	/**
+	 * Indicates if OpenCV was initialized sucessfully.
+	 */
+	private static boolean ocvOn = false;
+
+	/**
+	 * Intrinsic camera matrix.
+	 */
+	private static Mat cameraMatrix;
+
+	/**
+	 * Distortion coeffitients matrix.
+	 */
+	private static Mat distortionCoeffs;
+
+	/**
+	 * Used to set and release multicast locks.
+	 */
 	private WifiManager wifiManager;
+
+	/**
+	 * Used to maintain the multicast lock during the service discovery procedure.
+	 */
 	private MulticastLock multicastLock;
+
+	/**
+	 * Handler used for requesting toast messages from the core LibGDX code.
+	 */
 	private Handler uiHandler;
+
+	/**
+	 * User interface context used to show the toast messages.
+	 */
 	private Context uiContext;
+
+	/**
+	 * OpenCV asynchronous initializer callback for mobile devices.
+	 */
 	private BaseLoaderCallback loaderCallback;
+
+	/**
+	 * Indicates if the current video streaming camera has been calibrated.
+	 */
 	private boolean cameraCalibrated;
 
-	public native void getMarkerCodesAndLocations(long inMat, long outMat, int[] codes);
-	public native boolean findCalibrationPattern(long inMat, long outMat, float[] points);
-	public native double calibrateCameraParameters(long camMat, long distMat, long frame, float[] calibrationPoints);
+	/**
+	 * <p>Wrapper for the getAllMarkers native function.</p>
+	 * 
+	 * @param inMat INPUT. The image to analize.
+	 * @param outMat OUTPUT. The image with the markers highlighted.
+	 * @param codes OUTPUT. The codes for each marker detected. Must be 15 elements long.
+	 */
+	private native void getMarkerCodesAndLocations(long inMat, long outMat, int[] codes);
+
+	/**
+	 * <p>Wrapper for the findCalibrationPattern native function.</p>
+	 * 
+	 * @param inMat INPUT. The image to analize.
+	 * @param outMat OUTPUT. The image with the calibration pattern highlighted.
+	 * @param points OUTPUT. The spatial location of the calibration points if found.
+	 * @return True if the calibration pattern was found. False otherwise.
+	 */
+	private native boolean findCalibrationPattern(long inMat, long outMat, float[] points);
+
+	/**
+	 * <p>Wrapper around the getCameraParameters native function.</p>
+	 * 
+	 * @param camMat OUTPUT. The intrinsic camera matrix.
+	 * @param distMat OUTPUT. The distortion coeffitients matrix.
+	 * @param frame INPUT. A sample input image from the camera to calibrate.
+	 * @param calibrationPoints INPUT. The calibration points of all samples. 
+	 * @return The calibration error as returned by OpenCV.
+	 */
+	private native double calibrateCameraParameters(long camMat, long distMat, long frame, float[] calibrationPoints);
 
 	/**
 	 * <p>Static block. Tries to load OpenCV and the native method implementations
@@ -90,7 +162,9 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	 * <p>Initializes this activity</p>
 	 * 
 	 * <p>This method handles the initialization of LibGDX and OpenCV. OpenCV is
-	 * loaded the asynchronous method if the devices is not an OUYA console.
+	 * loaded the asynchronous method if the devices is not an OUYA console.</p>
+	 * 
+	 * @param savedInstanceState The application state if it was saved in a previous run.
 	 */
 	@Override
 	public void onCreate(Bundle savedInstanceState){
@@ -126,6 +200,7 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 						cameraMatrix = new Mat();
 						distortionCoeffs = new Mat();
 						break;
+
 					default:
 						Toast.makeText(uiContext, R.string.ocv_failed, Toast.LENGTH_LONG).show();
 						ocvOn = false;
@@ -164,9 +239,9 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	////////////////////////////////////////////////
 
 	/**
-	 * <p>Implementation of the showShortToast method.</p>
-	 * 
 	 * <p>Shows a short message on screen using Android's toast mechanism.</p>
+	 * 
+	 * @param msg The message to show.
 	 */
 	@Override
 	public void showShortToast(final String msg){
@@ -179,9 +254,9 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	}
 
 	/**
-	 * <p>Implementation of the showLongToast method.</p>
-	 * 
 	 * <p>Shows a long message on screen using Android's toast mechanism.</p>
+	 * 
+	 * @param msg The message to show.
 	 */
 	@Override
 	public void showLongToast(final String msg){
@@ -194,8 +269,6 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	}
 
 	/**
-	 * <p>Implementation of the enableMulticast method.</p>
-	 * 
 	 * <p>Enable the transmision and reception of multicast network messages.</p>
 	 */
 	@Override
@@ -207,8 +280,6 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	}
 
 	/**
-	 * <p>Implementation of the disableMulticast method.</p>
-	 * 
 	 * <p>Disables the transmision and reception of multicast network messages.</p>
 	 */
 	@Override
@@ -413,6 +484,8 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	/**
 	 * <p>Indicates if OpenCV has been sucessfully initialized and used
 	 * to obtain the camera parameters for calibration.</p>
+	 * 
+	 * @return True if and only if OpenCV initialized succesfully and calibrateCamera has been called previously.
 	 */
 	@Override
 	public boolean cameraIsCalibrated() {

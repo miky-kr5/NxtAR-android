@@ -20,11 +20,11 @@
 
 #include "marker.hpp"
 
-//#define CAN_LOG
+//#define LOG_ENABLED
 #define POINTS_PER_CALIBRATION_SAMPLE 54
 #define CALIBRATION_SAMPLES 10
 
-#ifdef CAN_LOG
+#ifdef LOG_ENABLED
 #define log(TAG, MSG) (__android_log_write(ANDROID_LOG_DEBUG, TAG, MSG))
 #else
 #define log(TAG, MSG) ;
@@ -35,65 +35,79 @@ const char * TAG = "CVPROC_NATIVE";
 extern "C"{
 
 /**
- *
+ * JNI wrapper around the nxtar::getAllMarkers() method.
  */
 JNIEXPORT void JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_getMarkerCodesAndLocations(JNIEnv* env, jobject jobj, jlong addrMatIn, jlong addrMatOut, jintArray codes){
 	char codeMsg[128];
 	std::vector<int> vCodes;
+	cv::Mat temp;
 
 	log(TAG, "getMarkerCodesAndLocations(): Requesting native data.");
 
+	// Get the native object addresses.
 	cv::Mat& myuv  = *(cv::Mat*)addrMatIn;
 	cv::Mat& mbgr  = *(cv::Mat*)addrMatOut;
 	jint * _codes = env->GetIntArrayElements(codes, 0);
-	cv::Mat temp;
 
+	// Convert the input image to the BGR color space.
 	log(TAG, "getMarkerCodesAndLocations(): Converting color space before processing.");
 	cv::cvtColor(myuv, temp, CV_RGB2BGR);
 
+	// Find all markers in the input image.
 	log(TAG, "getMarkerCodesAndLocations(): Finding markers.");
 	nxtar::getAllMarkers(vCodes, temp);
 
+	// Copy the marker codes to the output vector.
 	log(TAG, "getMarkerCodesAndLocations(): Copying marker codes.");
 	for(int i = 0; i < vCodes.size() && i < 15; i++){
 		_codes[i] = (jint)vCodes[i];
 	}
 	vCodes.clear();
 
+	// Convert the output image back to the RGB color space.
 	cv::cvtColor(temp, mbgr, CV_BGR2RGB);
 
+	// Release native data.
 	log(TAG, "getMarkerCodesAndLocations(): Releasing native data.");
 	env->ReleaseIntArrayElements(codes, _codes, 0);
 }
 
 /**
- *
+ * JNI wrapper around the nxtar::findCalibrationPattern() method.
  */
 JNIEXPORT jboolean JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_findCalibrationPattern(JNIEnv* env, jobject jobj, jlong addrMatIn, jlong addrMatOut, jfloatArray points){
 	nxtar::points_vector v_points;
 	bool found;
+	cv::Mat temp;
 
 	log(TAG, "findCalibrationPattern(): Requesting native data.");
 
+	// Get the native object addresses.
 	cv::Mat& myuv  = *(cv::Mat*)addrMatIn;
 	cv::Mat& mbgr  = *(cv::Mat*)addrMatOut;
 	jfloat * _points = env->GetFloatArrayElements(points, 0);
-	cv::Mat temp;
 
+	// Convert the input image to the BGR color space.
 	log(TAG, "findCalibrationPattern(): Converting color space before processing.");
 	cv::cvtColor(myuv, temp, CV_RGB2BGR);
 
+	// Find the calibration points in the input image.
 	log(TAG, "findCalibrationPattern(): Finding calibration pattern.");
 	found = nxtar::findCalibrationPattern(v_points, temp);
 
-	log(TAG, "findCalibrationPattern(): Copying calibration points.");
-	for(size_t i = 0, p = 0; i < v_points.size(); i++, p += 2){
-		_points[p] = (jfloat)v_points[i].x;
-		_points[p + 1] = (jfloat)v_points[i].y;
+	// If the points were found then save them to the output array.
+	if(found){
+		log(TAG, "findCalibrationPattern(): Copying calibration points.");
+		for(size_t i = 0, p = 0; i < v_points.size(); i++, p += 2){
+			_points[p] = (jfloat)v_points[i].x;
+			_points[p + 1] = (jfloat)v_points[i].y;
+		}
 	}
 
+	// Convert the output image back to the RGB color space.
 	cv::cvtColor(temp, mbgr, CV_BGR2RGB);
 
+	// Release native data.
 	log(TAG, "findCalibrationPattern(): Releasing native data.");
 	env->ReleaseFloatArrayElements(points, _points, 0);
 
@@ -101,7 +115,7 @@ JNIEXPORT jboolean JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_findCalibrat
 }
 
 /**
- *
+ * JNI wrapper around the nxtar::getCameraParameters() method.
  */
 JNIEXPORT jdouble JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_calibrateCameraParameters(JNIEnv* env, jobject jobj, jlong addrMatIn, jlong addrMatOut, jlong addrMatFrame, jfloatArray points){
 	double error;
