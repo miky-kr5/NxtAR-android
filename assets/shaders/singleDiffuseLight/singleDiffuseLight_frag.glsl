@@ -1,15 +1,22 @@
+/*
+ * Copyright (C) 2014 Miguel Angel Astor Romero
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifdef GL_ES
 precision mediump float;
 #endif
-
-// Camera world space position.
-uniform vec3 u_cameraPos;
-
-// Light source position
-uniform vec4 u_lightPos;
-
-// Diffuse light color.
-uniform vec4 u_lightDiffuse;
 
 // Ambient light color.
 uniform vec4 u_ambient;
@@ -26,25 +33,24 @@ varying vec3 v_normal;
 // Fragment color received from the vertex shader.
 varying vec4 v_color;
 
+// Fragment shaded diffuse color.
+varying vec4 v_diffuse;
+
+varying vec3 v_lightVector;
+varying vec3 v_eyeVector;
+varying vec3 v_reflectedVector;
+
 void main(){
-	vec3 normal = normalize(v_normal);
-	vec3 lightVector = normalize(u_lightPos.xyz - v_position.xyz);
-	vec3 eyeVector = normalize(u_cameraPos.xyz - v_position.xyz);
-	vec3 reflectedVector = normalize(-reflect(lightVector, normal));
-
-	// Ambient Term.
-	vec4 ambient = u_ambient;
-
-	// Diffuse Term.
-	vec4 diffuse = u_lightDiffuse * max(dot(normal, lightVector), 0.0);
-	diffuse = clamp(diffuse, 0.0, 1.0);
+	// Normalize the input varyings.
+	vec3 lightVector = normalize(v_lightVector);
+	vec3 eyeVector = normalize(v_eyeVector);
+	vec3 reflectedVector = normalize(v_reflectedVector);
 
 	// Specular Term:
 	vec4 specular = vec4(1.0) * pow(max(dot(reflectedVector, eyeVector), 0.0), 0.3 * u_shiny);
-	specular = clamp(specular, 0.0, 1.0);
 
 	// Aggregate light color.
-	vec4 lightColor = vec4(ambient.rgb + diffuse.rgb + specular.rgb, 1.0);
+	vec4 lightColor = clamp(vec4(u_ambient.rgb + v_diffuse.rgb + specular.rgb, 1.0), 0.0, 1.0);
 
 	// Final color.
 	gl_FragColor = clamp(lightColor * v_color, 0.0, 1.0);
