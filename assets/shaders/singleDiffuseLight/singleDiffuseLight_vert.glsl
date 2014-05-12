@@ -17,6 +17,9 @@
 // Model-view matrix.
 uniform mat4 u_projTrans;
 
+// The world space geometric transformation to apply to this vertex.
+uniform mat4 u_geomTrans;
+
 // Light source position
 uniform vec4 u_lightPos;
 
@@ -51,14 +54,17 @@ varying vec3 v_eyeVector;
 varying vec3 v_reflectedVector;
 
 void main(){
+	// Apply the geometric transformation to the original position of the vertex.
+	vec4 transformedPosition = u_geomTrans * a_position;
+
 	// Set the varyings.
-	v_lightVector = normalize(u_lightPos.xyz - a_position.xyz);
-	v_eyeVector = normalize(u_cameraPos.xyz - a_position.xyz);
+	v_lightVector = normalize(u_lightPos.xyz - transformedPosition.xyz);
+	v_eyeVector = normalize(u_cameraPos.xyz - transformedPosition.xyz);
 	v_reflectedVector = normalize(-reflect(v_lightVector, a_normal.xyz));
 	v_color = a_color;
 
 	// Diffuse Term.
 	v_diffuse = u_lightDiffuse * max(dot(a_normal.xyz, v_lightVector), 0.0);
 
-	gl_Position = u_projTrans * a_position;
+	gl_Position = u_projTrans * transformedPosition;
 }

@@ -21,6 +21,9 @@ precision mediump float;
 // Ambient light color.
 uniform vec4 u_ambient;
 
+// Specular light color.
+uniform vec4 u_specular;
+
 // Shininess.
 uniform float u_shiny;
 
@@ -47,7 +50,7 @@ void main(){
 	vec3 reflectedVector = normalize(v_reflectedVector);
 
 	// Specular Term:
-	vec4 specular = vec4(1.0) * pow(max(dot(reflectedVector, eyeVector), 0.0), 0.3 * u_shiny);
+	vec4 specular = u_specular * pow(max(dot(reflectedVector, eyeVector), 0.0), 0.3 * u_shiny);
 
 	// Aggregate light color.
 	vec4 lightColor = clamp(vec4(u_ambient.rgb + v_diffuse.rgb + specular.rgb, 1.0), 0.0, 1.0);
