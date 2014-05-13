@@ -24,8 +24,8 @@ import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
-import ve.ucv.ciens.ccg.nxtar.interfaces.CVProcessor;
-import ve.ucv.ciens.ccg.nxtar.interfaces.OSFunctionalityProvider;
+import ve.ucv.ciens.ccg.nxtar.interfaces.AndroidFunctionalityWrapper;
+import ve.ucv.ciens.ccg.nxtar.interfaces.ImageProcessor;
 import ve.ucv.ciens.ccg.nxtar.utils.ProjectConstants;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
@@ -42,6 +42,8 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.badlogic.gdx.controllers.mappings.Ouya;
+import com.badlogic.gdx.math.Matrix3;
+import com.badlogic.gdx.math.Vector3;
 
 /**
  * <p>The main activity of the application.</p>
@@ -49,7 +51,7 @@ import com.badlogic.gdx.controllers.mappings.Ouya;
  * <p>Provides operating system services to the LibGDX platform
  * independant code, and handles OpenCV initialization and api calls.</p>
  */
-public class MainActivity extends AndroidApplication implements OSFunctionalityProvider, CVProcessor{
+public class MainActivity extends AndroidApplication implements AndroidFunctionalityWrapper, ImageProcessor{
 	/**
 	 * Tag used for logging.
 	 */
@@ -115,9 +117,13 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	 * 
 	 * @param inMat INPUT. The image to analize.
 	 * @param outMat OUTPUT. The image with the markers highlighted.
-	 * @param codes OUTPUT. The codes for each marker detected. Must be 15 elements long.
+	 * @param codes OUTPUT. The codes for each marker detected. Must be {@link ProjectConstants.MAXIMUM_NUMBER_OF_MARKERS} elements long.
+	 * @param camMat INPUT. The intrinsic camera matrix.
+	 * @param distMat INPUT. The distortion coefficients of the camera.
+	 * @param translations OUTPUT. The markers pose translations. Must be {@link ProjectConstants.MAXIMUM_NUMBER_OF_MARKERS} * 3 elements long.
+	 * @param rotations OUTPUT. The markers pose rotations. Must be {@link ProjectConstants.MAXIMUM_NUMBER_OF_MARKERS} * 9 elements long.
 	 */
-	private native void getMarkerCodesAndLocations(long inMat, long outMat, int[] codes);
+	private native void getMarkerCodesAndLocations(long inMat, long outMat, int[] codes, long camMat, long distMat, float[] translations, float[] rotations);
 
 	/**
 	 * <p>Wrapper for the findCalibrationPattern native function.</p>
@@ -298,7 +304,7 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	/**
 	 * <p>Implementation of the findMarkersInFrame method.</p>
 	 * 
-	 * <p>This implementation finds up to 15 markers in the input
+	 * <p>This implementation finds up to {@link ProjectConstants.MAXIMUM_NUMBER_OF_MARKERS} markers in the input
 	 * image and returns their codes and locations in the CVMarkerData
 	 * structure. The markers are higlihted in the input image.</p>
 	 * 
@@ -307,37 +313,64 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	 * detected marker codes and their respective locations.
 	 */
 	@Override
-	public CVMarkerData findMarkersInFrame(byte[] frame){
+	public MarkerData findMarkersInFrame(byte[] frame){
 		if(ocvOn){
-			int codes[] = new int[15];
-			Bitmap tFrame, mFrame;
-			Mat inImg = new Mat();
-			Mat outImg = new Mat();
+			if(cameraCalibrated){
+				int[] codes = new int[ProjectConstants.MAXIMUM_NUMBER_OF_MARKERS];
+				float[] translations = new float[ProjectConstants.MAXIMUM_NUMBER_OF_MARKERS * 3];
+				float[] rotations = new float[ProjectConstants.MAXIMUM_NUMBER_OF_MARKERS * 9];
+				MarkerData data;
+				Bitmap tFrame, mFrame;
+				Mat inImg = new Mat();
+				Mat outImg = new Mat();
 
-			// Decode the input image and convert it to an OpenCV matrix.
-			tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
-			Utils.bitmapToMat(tFrame, inImg);
+				// Fill the codes array with -1 to indicate markers that were not found;
+				for(int i : codes)
+					codes[i] = -1;
 
-			// Find up to 15 markers in the input image.
-			getMarkerCodesAndLocations(inImg.getNativeObjAddr(), outImg.getNativeObjAddr(), codes);
+				// Decode the input image and convert it to an OpenCV matrix.
+				tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
+				Utils.bitmapToMat(tFrame, inImg);
 
-			// Encode the output image as a JPEG image.
-			mFrame = Bitmap.createBitmap(outImg.cols(), outImg.rows(), Bitmap.Config.RGB_565);
-			Utils.matToBitmap(outImg, mFrame);
-			mFrame.compress(CompressFormat.JPEG, 100, outputStream);
+				// Find the markers in the input image.
+				getMarkerCodesAndLocations(inImg.getNativeObjAddr(), outImg.getNativeObjAddr(), codes, cameraMatrix.getNativeObjAddr(), distortionCoeffs.getNativeObjAddr(), translations, rotations);
 
-			// Create the output data structure.
-			CVMarkerData data = new CVMarkerData();
-			data.outFrame = outputStream.toByteArray();
-			data.markerCodes = codes;
+				// Encode the output image as a JPEG image.
+				mFrame = Bitmap.createBitmap(outImg.cols(), outImg.rows(), Bitmap.Config.RGB_565);
+				Utils.matToBitmap(outImg, mFrame);
+				mFrame.compress(CompressFormat.JPEG, 100, outputStream);
 
-			// Clean up memory.
-			tFrame.recycle();
-			mFrame.recycle();
-			outputStream.reset();
+				// Create and fill the output data structure.
+				data = new MarkerData();
+				data.outFrame = outputStream.toByteArray();
+				data.markerCodes = codes;
+				data.rotationMatrices = new Matrix3[ProjectConstants.MAXIMUM_NUMBER_OF_MARKERS];
+				data.translationVectors = new Vector3[ProjectConstants.MAXIMUM_NUMBER_OF_MARKERS];
 
-			return data;
+				for(int i = 0, p = 0; i < ProjectConstants.MAXIMUM_NUMBER_OF_MARKERS; i++, p += 3){
+					data.translationVectors[i] = new Vector3(translations[p], translations[p + 1], translations[p + 2]);
+				}
 
+				// TODO: Check that the matrix is being copied correctly.
+				for(int k = 0; k < ProjectConstants.MAXIMUM_NUMBER_OF_MARKERS; k++){
+					data.rotationMatrices[k] = new Matrix3();
+					for(int row = 0; row < 3; row++){
+						for(int col = 0; col < 3; col++){
+							data.rotationMatrices[k].val[col + (row * 3)] = rotations[col + (row * 3) + (9 * k)];
+						}
+					}
+				}
+
+				// Clean up memory.
+				tFrame.recycle();
+				mFrame.recycle();
+				outputStream.reset();
+
+				return data;
+			}else{
+				Gdx.app.debug(TAG, CLASS_NAME + ".findMarkersInFrame(): The camera has not been calibrated.");
+				return null;
+			}
 		}else{
 			Gdx.app.debug(TAG, CLASS_NAME + ".findMarkersInFrame(): OpenCV is not ready or failed to load.");
 			return null;
@@ -358,13 +391,13 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	 * calibration points array is null.
 	 */
 	@Override
-	public CVCalibrationData findCalibrationPattern(byte[] frame){
+	public CalibrationData findCalibrationPattern(byte[] frame){
 		if(ocvOn){
 			boolean found;
 			float points[] = new float[ProjectConstants.CALIBRATION_PATTERN_POINTS * 2];
 			Bitmap tFrame, mFrame;
 			Mat inImg = new Mat(), outImg = new Mat();
-			CVCalibrationData data = new CVCalibrationData();
+			CalibrationData data = new CalibrationData();
 
 			// Decode the input frame and convert it to an OpenCV Matrix.
 			tFrame = BitmapFactory.decodeByteArray(frame, 0, frame.length);
@@ -488,7 +521,7 @@ public class MainActivity extends AndroidApplication implements OSFunctionalityP
 	 * @return True if and only if OpenCV initialized succesfully and calibrateCamera has been called previously.
 	 */
 	@Override
-	public boolean cameraIsCalibrated() {
+	public boolean isCameraCalibrated() {
 		return ocvOn && cameraCalibrated;
 	}
 }

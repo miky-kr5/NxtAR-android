@@ -27,7 +27,6 @@ namespace nxtar{
 
 typedef std::vector<cv::Point3f>             points_vector_3D;
 typedef std::vector<std::vector<cv::Point> > contours_vector;
-typedef std::vector<Marker>                  markers_vector;
 
 /******************************************************************************
  * PRIVATE CONSTANTS                                                          *
@@ -92,16 +91,15 @@ void warpMarker(Marker &, cv::Mat &, cv::Mat &);
  * PUBLIC API                                                                 *
  ******************************************************************************/
 
-void getAllMarkers(std::vector<int> & codes, cv::Mat & img){
+void getAllMarkers(markers_vector & valid_markers, cv::Mat & img){
 	cv::Mat gray, thresh, cont, mark;
 	contours_vector contours;
 	markers_vector markers;
-	markers_vector valid_markers;
 #ifdef DESKTOP
 	std::ostringstream oss;
 #endif
 
-	codes.clear();
+	valid_markers.clear();
 
 	// Find all marker candidates in the input image.
 	//   1) First, convert the image to grayscale.
@@ -147,7 +145,6 @@ void getAllMarkers(std::vector<int> & codes, cv::Mat & img){
 		// Fix the detected corners to better approximate the markers. And
 		// push their codes to the output vector.
 		cv::cornerSubPix(gray, valid_markers[i].points, cvSize(10, 10), cvSize(-1, -1), TERM_CRITERIA);
-		codes.push_back(valid_markers[i].code);
 	}
 
 	// Render the detected markers on top of the input image.
@@ -158,7 +155,6 @@ void getAllMarkers(std::vector<int> & codes, cv::Mat & img){
 	// Clear the local vectors.
 	markers.clear();
 	contours.clear();
-	valid_markers.clear();
 }
 
 bool findCalibrationPattern(points_vector & corners, cv::Mat & img){
@@ -202,6 +198,35 @@ double getCameraParameters(cv::Mat & camera_matrix, cv::Mat & dist_coeffs, std::
 
 	// Calibrate and return the reprojection error.
 	return cv::calibrateCamera(object_points, image_points, image_size, camera_matrix, dist_coeffs, rvecs, tvecs, 0, TERM_CRITERIA);
+}
+
+void estimateMarkerPosition(markers_vector & markers, cv::Mat & camMatrix, cv::Mat & distCoeff){
+	cv::Mat rVec, rAux, tAux;
+	cv::Mat_<float> tVec, rotation(3,3);
+	points_vector_3D objectPoints;
+
+	// Assemble a unitary CCW oriented reference polygon.
+	objectPoints.push_back(cv::Point3f(-0.5f, -0.5f, 0.0f));
+	objectPoints.push_back(cv::Point3f(-0.5f,  0.5f, 0.0f));
+	objectPoints.push_back(cv::Point3f( 0.5f,  0.5f, 0.0f));
+	objectPoints.push_back(cv::Point3f( 0.5f, -0.5f, 0.0f));
+
+	for(size_t i = 0; i < markers.size(); i++){
+		// Obtain the translation and rotation vectors.
+		cv::solvePnP(objectPoints, markers[i].points, camMatrix, distCoeff, rAux, tAux);
+
+		// Convert the obtained vectors to float.
+		rAux.convertTo(rVec, CV_32F);
+		tAux.convertTo(tVec, CV_32F);
+
+		// Convert the rotation vector to a rotation matrix.
+		cv::Rodrigues(rVec, rotation);
+
+		// Make the rotation and translation relative to the "camera" and save
+		// the results to the output marker.
+		markers[i].rotation = cv::Mat(rotation.t());
+		markers[i].translation = cv::Mat(-tVec);
+	}
 }
 
 /******************************************************************************
@@ -357,6 +382,7 @@ void warpMarker(Marker & m, cv::Mat & in, cv::Mat & out){
 
 /**
  * Calculate the hamming distance of a 5x5 bit matrix.
+ * Function by Daniel Lelis Baggio for "Mastering OpenCV with Practical Computer Vision Projects".
  */
 int hammDistMarker(cv::Mat bits){
 	int ids[4][5] = {
@@ -397,7 +423,7 @@ cv::Mat rotate(cv::Mat in){
 	in.copyTo(out);
 	for (int i = 0; i < in.rows; i++){
 		for (int j = 0; j < in.cols; j++){
-			out.at<uchar>(i, j)=in.at<uchar>(in.cols-j - 1, i);
+			out.at<uchar>(i, j) = in.at<uchar>(in.cols-j - 1, i);
 		}
 	}
 
