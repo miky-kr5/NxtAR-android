@@ -20,7 +20,7 @@
 
 #include "marker.hpp"
 
-//#define LOG_ENABLED
+#define LOG_ENABLED
 #define MAX_MARKERS 5
 #define TRANSLATION_VECTOR_POINTS 3
 #define ROTATION_MATRIX_SIZE 9
@@ -79,9 +79,12 @@ JNIEXPORT void JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_getMarkerCodesAn
 	}
 
 	for(int k = 0; k < vMarkers.size(); k++){
+		log(TAG, "getMarkerCodesAndLocations(): Rotation matrix:");
 		for(int row = 0; row < 3; row++){
 			for(int col = 0; col < 3; col++){
-				_rt[col + (row * 3) + (9 * k)] = vMarkers[k].rotation.at<jfloat>(row, col);
+				sprintf(codeMsg, "%f ", vMarkers[k].rotation.at<jfloat>(row, col));
+				log(TAG, codeMsg);
+				_rt[row + (col * 3) + (9 * k)] = vMarkers[k].rotation.at<jfloat>(row, col);
 			}
 		}
 	}
