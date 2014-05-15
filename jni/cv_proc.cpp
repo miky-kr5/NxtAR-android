@@ -20,7 +20,7 @@
 
 #include "marker.hpp"
 
-#define LOG_ENABLED
+//#define LOG_ENABLED
 #define MAX_MARKERS 5
 #define TRANSLATION_VECTOR_POINTS 3
 #define ROTATION_MATRIX_SIZE 9
@@ -52,9 +52,9 @@ JNIEXPORT void JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_getMarkerCodesAn
 	cv::Mat& mbgr   = *(cv::Mat*)addrMatOut;
 	cv::Mat& mCam   = *(cv::Mat*)camMat;
 	cv::Mat& mDist  = *(cv::Mat*)distMat;
-	jint * _codes = env->GetIntArrayElements(codes, 0);
-	jfloat * _tr = env->GetFloatArrayElements(translations, 0);
-	jfloat * _rt = env->GetFloatArrayElements(rotations, 0);
+	jint * _codes   = env->GetIntArrayElements(codes, 0);
+	jfloat * _tr    = env->GetFloatArrayElements(translations, 0);
+	jfloat * _rt    = env->GetFloatArrayElements(rotations, 0);
 
 	// Convert the input image to the BGR color space.
 	log(TAG, "getMarkerCodesAndLocations(): Converting color space before processing.");
@@ -79,12 +79,9 @@ JNIEXPORT void JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_getMarkerCodesAn
 	}
 
 	for(int k = 0; k < vMarkers.size(); k++){
-		log(TAG, "getMarkerCodesAndLocations(): Rotation matrix:");
 		for(int row = 0; row < 3; row++){
 			for(int col = 0; col < 3; col++){
-				sprintf(codeMsg, "%f ", vMarkers[k].rotation.at<jfloat>(row, col));
-				log(TAG, codeMsg);
-				_rt[row + (col * 3) + (9 * k)] = vMarkers[k].rotation.at<jfloat>(row, col);
+				_rt[col + (row * 3) + (9 * k)] = vMarkers[k].rotation.at<jfloat>(row, col);
 			}
 		}
 	}
@@ -128,7 +125,7 @@ JNIEXPORT jboolean JNICALL Java_ve_ucv_ciens_ccg_nxtar_MainActivity_findCalibrat
 	if(found){
 		log(TAG, "findCalibrationPattern(): Copying calibration points.");
 		for(size_t i = 0, p = 0; i < v_points.size(); i++, p += 2){
-			_points[p] = (jfloat)v_points[i].x;
+			_points[p    ] = (jfloat)v_points[i].x;
 			_points[p + 1] = (jfloat)v_points[i].y;
 		}
 	}

@@ -301,17 +301,6 @@ public class MainActivity extends AndroidApplication implements AndroidFunctiona
 	// CVProcessor interface methods. //
 	////////////////////////////////////
 
-	/**
-	 * <p>Implementation of the findMarkersInFrame method.</p>
-	 * 
-	 * <p>This implementation finds up to {@link ProjectConstants.MAXIMUM_NUMBER_OF_MARKERS} markers in the input
-	 * image and returns their codes and locations in the CVMarkerData
-	 * structure. The markers are higlihted in the input image.</p>
-	 * 
-	 * @param frame The JPEG encoded input image.
-	 * @return A data structure containing the processed output image, the
-	 * detected marker codes and their respective locations.
-	 */
 	@Override
 	public MarkerData findMarkersInFrame(byte[] frame){
 		if(ocvOn){
@@ -351,7 +340,6 @@ public class MainActivity extends AndroidApplication implements AndroidFunctiona
 					data.translationVectors[i] = new Vector3(translations[p], translations[p + 1], translations[p + 2]);
 				}
 
-				// TODO: Check that the matrix is being copied correctly.
 				for(int k = 0; k < ProjectConstants.MAXIMUM_NUMBER_OF_MARKERS; k++){
 					data.rotationMatrices[k] = new Matrix3();
 					for(int row = 0; row < 3; row++){
@@ -377,19 +365,6 @@ public class MainActivity extends AndroidApplication implements AndroidFunctiona
 		}
 	}
 
-	/**
-	 * <p>Implementation of the findCalibrationPattern method.</p>
-	 * 
-	 * <p>Attempts to detect a checkerboard calibration pattern in the input image.
-	 * If the pattenr is found the method returns an image with the pattern
-	 * highlighted and the spatial location of the calibration points in the 
-	 * output data structure.</p>
-	 * 
-	 * @param frame The JPEG encoded input image.
-	 * @return A data structure containing the processed output image and the
-	 * location of the calibration points. If the pattern was not found, the returnd
-	 * calibration points array is null.
-	 */
 	@Override
 	public CalibrationData findCalibrationPattern(byte[] frame){
 		if(ocvOn){
@@ -428,11 +403,6 @@ public class MainActivity extends AndroidApplication implements AndroidFunctiona
 		}
 	}
 
-	/**
-	 * <p>Implementation of the calibrateCamera method.</p>
-	 * 
-	 * <p>Obtains the intrinsic camera parameters necesary for calibration.</p>
-	 */
 	@Override
 	public void calibrateCamera(float[][] calibrationSamples, byte[] frame) {
 		if(ocvOn){
@@ -464,16 +434,6 @@ public class MainActivity extends AndroidApplication implements AndroidFunctiona
 		}
 	}
 
-
-	/**
-	 * <p>Implementation of the undistorFrame method.</p>
-	 * 
-	 * <p>Removes camera lens distortion from the input image using the
-	 * camera parameters obtained by the calibrateCamera method.</p>
-	 * 
-	 * @return A JPEG encoded image that is the input image after distortion correction. If the
-	 * camera has not been calibrated or OpenCV failed to load returns null.
-	 */
 	@Override
 	public byte[] undistortFrame(byte[] frame){
 		if(ocvOn){
@@ -514,14 +474,28 @@ public class MainActivity extends AndroidApplication implements AndroidFunctiona
 		}
 	}
 
-	/**
-	 * <p>Indicates if OpenCV has been sucessfully initialized and used
-	 * to obtain the camera parameters for calibration.</p>
-	 * 
-	 * @return True if and only if OpenCV initialized succesfully and calibrateCamera has been called previously.
-	 */
 	@Override
 	public boolean isCameraCalibrated() {
 		return ocvOn && cameraCalibrated;
+	}
+
+	@Override
+	public float getFocalPointX() {
+		return ocvOn && cameraCalibrated ? (float)cameraMatrix.get(0, 0)[0] : 0.0f;
+	}
+
+	@Override
+	public float getFocalPointY() {
+		return ocvOn && cameraCalibrated ? (float)cameraMatrix.get(1, 1)[0] : 0.0f;
+	}
+
+	@Override
+	public float getCameraCenterX() {
+		return ocvOn && cameraCalibrated ? (float)cameraMatrix.get(0, 2)[0] : 0.0f;
+	}
+
+	@Override
+	public float getCameraCenterY() {
+		return ocvOn && cameraCalibrated ? (float)cameraMatrix.get(1, 2)[0] : 0.0f;
 	}
 }
