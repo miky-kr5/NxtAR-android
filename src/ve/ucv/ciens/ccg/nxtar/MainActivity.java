@@ -231,10 +231,10 @@ public class MainActivity extends AndroidApplication implements AndroidFunctiona
 
 		// Configure LibGDX.
 		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
-		cfg.useGL20 = true;
 		cfg.useAccelerometer = false;
 		cfg.useCompass = false;
 		cfg.useWakelock = true;
+		cfg.useGL20 = true;
 
 		// Launch the LibGDX core game class.
 		initialize(new NxtARCore(this), cfg);

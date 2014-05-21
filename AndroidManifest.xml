@@ -14,11 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 -->
-<!-- android:screenOrientation="portrait" -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="ve.ucv.ciens.ccg.nxtar"
-    android:versionCode="140404"
-    android:versionName="14.04.04" >
+    android:versionCode="140515"
+    android:versionName="14.05.15" >
 
     <uses-sdk android:minSdkVersion="12" android:targetSdkVersion="19" />
 
