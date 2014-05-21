@@ -56,5 +56,5 @@ void main(){
 	vec4 lightColor = clamp(vec4(u_ambient.rgb + v_diffuse.rgb + specular.rgb, 1.0), 0.0, 1.0);
 
 	// Final color.
-	gl_FragColor = clamp(lightColor * v_color, 0.0, 1.0);
+	gl_FragColor = clamp(lightColor, 0.0, 1.0);
 }

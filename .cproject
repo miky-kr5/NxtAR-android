@@ -30,7 +30,7 @@
 									<listOptionValue builtIn="false" value="&quot;${NDKROOT}\sources\cxx-stl\gnu-libstdc++\4.6\include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${NDKROOT}\sources\cxx-stl\gnu-libstdc++\4.6\libs\armeabi-v7a\include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;C:\Users\miguel.astor\Documents\OpenCV-2.4.8-android-sdk\sdk\native\jni\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../${NDKROOT]\toolchains\arm-linux-androideabi-4.8\prebuilt\windows\lib\gcc\arm-linux-androideabi\4.8\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;C:\android-ndk-r9c\toolchains\arm-linux-androideabi-4.8\prebuilt\windows\lib\gcc\arm-linux-androideabi\4.8\include&quot;"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1450614296" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
@@ -50,7 +50,7 @@
 									<listOptionValue builtIn="false" value="&quot;${NDKROOT}\sources\cxx-stl\gnu-libstdc++\4.6\include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${NDKROOT}\sources\cxx-stl\gnu-libstdc++\4.6\libs\armeabi-v7a\include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;C:\Users\miguel.astor\Documents\OpenCV-2.4.8-android-sdk\sdk\native\jni\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../${NDKROOT]\toolchains\arm-linux-androideabi-4.8\prebuilt\windows\lib\gcc\arm-linux-androideabi\4.8\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;C:\android-ndk-r9c\toolchains\arm-linux-androideabi-4.8\prebuilt\windows\lib\gcc\arm-linux-androideabi\4.8\include&quot;"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.343342792" languageId="org.eclipse.cdt.core.gcc" languageName="GNU C" sourceContentType="org.eclipse.cdt.core.cSource,org.eclipse.cdt.core.cHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
@@ -77,4 +77,5 @@
 			<resource resourceType="PROJECT" workspacePath="/NxtAR-android"/>
 		</configuration>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>
