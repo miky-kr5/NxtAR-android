@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 // Model-view matrix.
 uniform mat4 u_projTrans;
 
 // The world space geometric transformation to apply to this vertex.
 uniform mat4 u_geomTrans;
+
+// The inverse transpose of the geometric transformation matrix.
+uniform mat4 u_normalMatrix;
 
 // Light source position
 uniform vec3 u_lightPos;
@@ -41,11 +43,8 @@ attribute vec4 a_normal;
 // Fragment normal.
 varying vec3 v_normal;
 
-// Diffuse shaded color to pass to the fragment shader.
+// Diffuse shaded color.
 varying vec4 v_diffuse;
-
-// The vector from the vertex to the light source.
-varying vec3 v_lightVector;
 
 // The vector from the vertex to the camera.
 varying vec3 v_eyeVector;
@@ -53,18 +52,23 @@ varying vec3 v_eyeVector;
 // The light vector reflected around the vertex normal.
 varying vec3 v_reflectedVector;
 
+// The clamped dot product between the normal and the light vector.
+varying float v_nDotL;
+
 void main(){
-	// Apply the geometric transformation to the original position of the vertex.
 	vec4 transformedPosition = u_geomTrans * a_position;
+	vec3 lightVector         = normalize(u_lightPos.xyz);
+	vec3 invLightVector      = normalize(-u_lightPos.xyz);
 
 	// Set the varyings.
-	v_normal = normalize(a_normal.xyz);
-	v_lightVector = normalize(transformedPosition.xyz - u_lightPos.xyz);
-	v_eyeVector = normalize(u_cameraPos.xyz - transformedPosition.xyz);
-	v_reflectedVector = normalize(reflect(-v_lightVector, a_normal.xyz));
+	v_normal          = normalize(vec4(u_normalMatrix * a_normal).xyz);
+	v_eyeVector       = normalize(u_cameraPos.xyz - transformedPosition.xyz);
+	v_reflectedVector = normalize(reflect(-lightVector, v_normal));
 
 	// Diffuse Term.
-	v_diffuse = u_lightDiffuse * u_materialDiffuse * max(dot(a_normal.xyz, v_lightVector), 0.0);
+	float invNDotL = max(dot(v_normal.xyz, invLightVector), 0.0);
+	v_nDotL   = max(dot(v_normal.xyz, lightVector), 0.0);
+	v_diffuse = (u_lightDiffuse * u_materialDiffuse * v_nDotL) + (vec4(0.1, 0.1, 0.2, 1.0) * u_materialDiffuse * invNDotL);
 
 	gl_Position = u_projTrans * transformedPosition;
 }

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -33,27 +32,29 @@ varying vec3 v_normal;
 // Fragment shaded diffuse color.
 varying vec4 v_diffuse;
 
-// Vector from the fragment to the light source.
-varying vec3 v_lightVector;
-
 // Vector from the fragment to the camera.
 varying vec3 v_eyeVector;
 
 // The light vector reflected around the fragment normal.
 varying vec3 v_reflectedVector;
 
+// The clamped dot product between the normal and the light vector.
+varying float v_nDotL;
+
 void main(){
 	// Normalize the input varyings.
-	vec3 normal = normalize(v_normal);
-	vec3 lightVector = normalize(v_lightVector);
-	vec3 eyeVector = normalize(v_eyeVector);
+	vec3 normal          = normalize(v_normal);
+	vec3 eyeVector       = normalize(v_eyeVector);
 	vec3 reflectedVector = normalize(v_reflectedVector);
 
-	// Specular Term:
-	vec4 specular = u_specular * pow(max(dot(reflectedVector, eyeVector), 0.0), u_shiny);
+	// Specular Term.
+	vec4 specular = vec4(0.0, 0.0, 0.0, 1.0);
+	if(v_nDotL > 0.0){
+		specular = u_specular * pow(max(dot(reflectedVector, eyeVector), 0.0), u_shiny);
+	}
 
 	// Aggregate light color.
-	vec4 finalColor = clamp(vec4(u_ambient.rgb + v_diffuse.rgb + specular.rgb, 1.0), 0.0, 1.0);
+	vec4 finalColor = clamp(vec4(/*u_ambient.rgb*/ + v_diffuse.rgb + specular.rgb, 1.0), 0.0, 1.0);
 
 	// Final color.
 	gl_FragColor = finalColor;
