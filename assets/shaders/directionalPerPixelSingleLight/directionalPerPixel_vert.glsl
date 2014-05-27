@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 // Model-view matrix.
 uniform mat4 u_projTrans;
 
@@ -34,11 +35,27 @@ uniform vec3 u_cameraPos;
 // Vertex color.
 uniform vec4 u_materialDiffuse;
 
+#ifdef SKINNING
+// The model's bones.
+uniform mat4 u_bone0;
+uniform mat4 u_bone1;
+uniform mat4 u_bone2;
+uniform mat4 u_bone3;
+#endif // SKINNING
+
 // Vertex position in world coordinates.
 attribute vec4 a_position;
 
 // Vertex normal.
 attribute vec4 a_normal;
+
+#ifdef SKINNING
+// The weight of each bone.
+attribute vec2 a_boneWeight0;
+attribute vec2 a_boneWeight1;
+attribute vec2 a_boneWeight2;
+attribute vec2 a_boneWeight3;
+#endif // SKINNING
 
 // Fragment normal.
 varying vec3 v_normal;
@@ -56,19 +73,44 @@ varying vec3 v_reflectedVector;
 varying float v_nDotL;
 
 void main(){
-	vec4 transformedPosition = u_geomTrans * a_position;
-	vec3 lightVector         = normalize(u_lightPos.xyz);
-	vec3 invLightVector      = normalize(-u_lightPos.xyz);
+	vec4 transformedPosition;
+
+	vec3 lightVector    = normalize(u_lightPos.xyz);
+	vec3 invLightVector = -lightVector;
+
+#ifdef SKINNING
+	// Do the skinning.
+	mat4 bones[4];
+	bones[0] = u_bone0;
+	bones[1] = u_bone1;
+	bones[2] = u_bone2;
+	bones[3] = u_bone3;
+
+	mat4 skinning = mat4(0.0);
+	skinning += (a_boneWeight0.y) * bones[int(a_boneWeight0.x)];
+	skinning += (a_boneWeight1.y) * bones[int(a_boneWeight1.x)];
+	skinning += (a_boneWeight2.y) * bones[int(a_boneWeight2.x)];
+	skinning += (a_boneWeight3.y) * bones[int(a_boneWeight3.x)];
+
+	// Transform the model.
+	transformedPosition = u_geomTrans * skinning * a_position;
+#else
+	transformedPosition = u_geomTrans * a_position;
+#endif // SKINNING
 
 	// Set the varyings.
+#ifdef SKINNING
+	v_normal          = normalize(vec4(u_normalMatrix * skinning * a_normal).xyz);
+#else
 	v_normal          = normalize(vec4(u_normalMatrix * a_normal).xyz);
+#endif // SKINNING
 	v_eyeVector       = normalize(u_cameraPos.xyz - transformedPosition.xyz);
-	v_reflectedVector = normalize(reflect(-lightVector, v_normal));
+	v_reflectedVector = normalize(reflect(invLightVector, v_normal));
 
 	// Diffuse Term.
 	float invNDotL = max(dot(v_normal.xyz, invLightVector), 0.0);
-	v_nDotL   = max(dot(v_normal.xyz, lightVector), 0.0);
-	v_diffuse = (u_lightDiffuse * u_materialDiffuse * v_nDotL) + (vec4(0.1, 0.1, 0.2, 1.0) * u_materialDiffuse * invNDotL);
+	v_nDotL        = max(dot(v_normal.xyz, lightVector), 0.0);
+	v_diffuse      = (u_lightDiffuse * u_materialDiffuse * v_nDotL) + (vec4(0.1, 0.1, 0.2, 1.0) * u_materialDiffuse * invNDotL);
 
 	gl_Position = u_projTrans * transformedPosition;
 }
