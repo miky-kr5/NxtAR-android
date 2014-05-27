@@ -16,8 +16,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="ve.ucv.ciens.ccg.nxtar"
-    android:versionCode="140515"
-    android:versionName="14.05.15" >
+    android:versionCode="140527"
+    android:versionName="14.05.27" >
 
     <uses-sdk android:minSdkVersion="12" android:targetSdkVersion="19" />
 
