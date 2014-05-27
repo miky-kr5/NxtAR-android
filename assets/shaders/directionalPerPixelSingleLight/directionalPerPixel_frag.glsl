@@ -27,34 +27,36 @@ uniform vec4 u_specular;
 // Shininess.
 uniform float u_shiny;
 
-// Fragment position.
-varying vec4 v_position;
-
 // Fragment normal.
 varying vec3 v_normal;
-
-// Fragment color received from the vertex shader.
-varying vec4 v_color;
 
 // Fragment shaded diffuse color.
 varying vec4 v_diffuse;
 
-varying vec3 v_lightVector;
+// Vector from the fragment to the camera.
 varying vec3 v_eyeVector;
+
+// The light vector reflected around the fragment normal.
 varying vec3 v_reflectedVector;
+
+// The clamped dot product between the normal and the light vector.
+varying float v_nDotL;
 
 void main(){
 	// Normalize the input varyings.
-	vec3 lightVector = normalize(v_lightVector);
-	vec3 eyeVector = normalize(v_eyeVector);
+	vec3 normal          = normalize(v_normal);
+	vec3 eyeVector       = normalize(v_eyeVector);
 	vec3 reflectedVector = normalize(v_reflectedVector);
 
-	// Specular Term:
-	vec4 specular = u_specular * pow(max(dot(reflectedVector, eyeVector), 0.0), 0.3 * u_shiny);
+	// Specular Term.
+	vec4 specular = vec4(0.0, 0.0, 0.0, 1.0);
+	if(v_nDotL > 0.0){
+		specular = u_specular * pow(max(dot(reflectedVector, eyeVector), 0.0), u_shiny);
+	}
 
 	// Aggregate light color.
-	vec4 lightColor = clamp(vec4(u_ambient.rgb + v_diffuse.rgb + specular.rgb, 1.0), 0.0, 1.0);
+	vec4 finalColor = clamp(vec4(/*u_ambient.rgb*/ + v_diffuse.rgb + specular.rgb, 1.0), 0.0, 1.0);
 
 	// Final color.
-	gl_FragColor = clamp(lightColor, 0.0, 1.0);
+	gl_FragColor = finalColor;
 }

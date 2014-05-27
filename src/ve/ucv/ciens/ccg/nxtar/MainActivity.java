@@ -24,7 +24,7 @@ import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
-import ve.ucv.ciens.ccg.nxtar.interfaces.AndroidFunctionalityWrapper;
+import ve.ucv.ciens.ccg.nxtar.interfaces.ActionResolver;
 import ve.ucv.ciens.ccg.nxtar.interfaces.ImageProcessor;
 import ve.ucv.ciens.ccg.nxtar.utils.ProjectConstants;
 import android.content.Context;
@@ -51,7 +51,7 @@ import com.badlogic.gdx.math.Vector3;
  * <p>Provides operating system services to the LibGDX platform
  * independant code, and handles OpenCV initialization and api calls.</p>
  */
-public class MainActivity extends AndroidApplication implements AndroidFunctionalityWrapper, ImageProcessor{
+public class MainActivity extends AndroidApplication implements ActionResolver, ImageProcessor{
 	/**
 	 * Tag used for logging.
 	 */
@@ -231,7 +231,6 @@ public class MainActivity extends AndroidApplication implements AndroidFunctiona
 
 		// Configure LibGDX.
 		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
-		cfg.useGL20 = true;
 		cfg.useAccelerometer = false;
 		cfg.useCompass = false;
 		cfg.useWakelock = true;

@@ -64,7 +64,7 @@ void main(){
 	v_color = a_color;
 
 	// Diffuse Term.
-	v_diffuse = u_lightDiffuse * max(dot(a_normal.xyz, v_lightVector), 0.0);
+	v_diffuse = u_lightDiffuse * vec4(1.0) * max(dot(a_normal.xyz, v_lightVector), 0.0);
 
 	gl_Position = u_projTrans * transformedPosition;
 }
