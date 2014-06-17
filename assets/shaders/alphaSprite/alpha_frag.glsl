@@ -13,14 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-uniform mat4 u_projTrans;
+#ifdef GL_ES
+precision mediump float;
+#endif
 
-attribute vec4 a_position;
-attribute vec2 a_texCoord0;
+uniform sampler2D u_texture;
 
 varying vec2 v_texCoords;
 
 void main(){
-	v_texCoords = a_texCoord0;
-	gl_Position = u_projTrans * a_position;
+	vec4 texColor = texture2D(u_texture, v_texCoords);
+	if(texColor.a > 0.0)
+		texColor.a = 0.5;
+	gl_FragColor = texColor;
 }
