@@ -77,7 +77,7 @@ int hammDistMarker(cv::Mat);
 
 cv::Mat rotate(cv::Mat);
 
-int decodeMarker(cv::Mat &);
+int decodeMarker(cv::Mat &, int &);
 
 void renderMarkers(markers_vector &, cv::Mat &);
 
@@ -92,9 +92,11 @@ void warpMarker(Marker &, cv::Mat &, cv::Mat &);
  ******************************************************************************/
 
 void getAllMarkers(markers_vector & valid_markers, cv::Mat & img){
+	int rotations = 0;
 	cv::Mat gray, thresh, cont, mark;
 	contours_vector contours;
 	markers_vector markers;
+	cv::Point2f point;
 #ifdef DESKTOP
 	std::ostringstream oss;
 #endif
@@ -116,10 +118,25 @@ void getAllMarkers(markers_vector & valid_markers, cv::Mat & img){
 	for(int i = 0; i < markers.size(); i++){
 		warpMarker(markers[i], gray, mark);
 
-		int code = decodeMarker(mark);
+		int code = decodeMarker(mark, rotations);
 
 		if(code != -1){
 			markers[i].code = code;
+
+			// If the decoder detected the marker is rotated then reorder the points
+			// so that the orientation calculations always use the correct top of the marker.
+			if(rotations > 0){
+				while(rotations > 0){
+					for(int r = 0; r < 3; r++){
+						point = markers[i].points.at(markers[i].points.size() - 1);
+						markers[i].points.pop_back();
+						markers[i].points.insert(markers[i].points.begin(), point);
+					}
+
+					rotations--;
+				}
+			}
+
 			valid_markers.push_back(markers[i]);
 		}
 	}
@@ -434,10 +451,12 @@ cv::Mat rotate(cv::Mat in){
  * Decode a marker image and return it's code. Returns -1 if the image is
  * not a valid marker.
  */
-int decodeMarker(cv::Mat & marker){
+int decodeMarker(cv::Mat & marker, int & rotations){
 	bool found = false;
 	int code = 0;
 	cv::Mat bits;
+
+	rotations = 0;
 
 	// Verify that the outer rim of marker cells are all black.
 	for(int y = 0; y < 7; y++){
@@ -478,6 +497,7 @@ int decodeMarker(cv::Mat & marker){
 	if(hammDistMarker(bits) != 0){
 		for(int r = 1; r < 4; r++){
 			bits = rotate(bits);
+			rotations++;
 			if(hammDistMarker(bits) != 0) continue;
 			else{ found = true; break;}
 		}
