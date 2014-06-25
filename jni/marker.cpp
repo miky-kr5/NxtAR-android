@@ -127,7 +127,7 @@ void getAllMarkers(markers_vector & valid_markers, cv::Mat & img){
 			// so that the orientation calculations always use the correct top of the marker.
 			if(rotations > 0){
 				while(rotations > 0){
-					for(int r = 0; r < 3; r++){
+					for(int r = 0; r < 1; r++){
 						point = markers[i].points.at(markers[i].points.size() - 1);
 						markers[i].points.pop_back();
 						markers[i].points.insert(markers[i].points.begin(), point);
@@ -135,6 +135,13 @@ void getAllMarkers(markers_vector & valid_markers, cv::Mat & img){
 
 					rotations--;
 				}
+			}
+
+			// Rotate 180 degrees.
+			for(int r = 0; r < 2; r++){
+				point = markers[i].points.at(markers[i].points.size() - 1);
+				markers[i].points.pop_back();
+				markers[i].points.insert(markers[i].points.begin(), point);
 			}
 
 			valid_markers.push_back(markers[i]);
