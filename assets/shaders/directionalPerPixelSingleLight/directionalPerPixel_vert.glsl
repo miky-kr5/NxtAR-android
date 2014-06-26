@@ -80,17 +80,61 @@ void main(){
 
 #ifdef SKINNING
 	// Do the skinning.
-	mat4 bones[4];
-	bones[0] = u_bone0;
-	bones[1] = u_bone1;
-	bones[2] = u_bone2;
-	bones[3] = u_bone3;
+	mat4 bones0;
+	mat4 bones1;
+	mat4 bones2;
+	mat4 bones3;
+	bones0 = u_bone0;
+	bones1 = u_bone1;
+	bones2 = u_bone2;
+	bones3 = u_bone3;
 
+	int index;
 	mat4 skinning = mat4(0.0);
-	skinning += (a_boneWeight0.y) * bones[int(a_boneWeight0.x)];
-	skinning += (a_boneWeight1.y) * bones[int(a_boneWeight1.x)];
-	skinning += (a_boneWeight2.y) * bones[int(a_boneWeight2.x)];
-	skinning += (a_boneWeight3.y) * bones[int(a_boneWeight3.x)];
+
+	index = int(a_boneWeight0.x);
+	if(index == 0){
+		skinning += (a_boneWeight0.y) * bones0;
+	}else if(index == 1){
+		skinning += (a_boneWeight0.y) * bones1;
+	}else if(index == 2){
+		skinning += (a_boneWeight0.y) * bones2;
+	}else if(index == 3){
+		skinning += (a_boneWeight0.y) * bones3;
+	}
+
+	index = int(a_boneWeight1.x);
+	if(index == 0){
+		skinning += (a_boneWeight1.y) * bones0;
+	}else if(index == 1){
+		skinning += (a_boneWeight1.y) * bones1;
+	}else if(index == 2){
+		skinning += (a_boneWeight1.y) * bones2;
+	}else if(index == 3){
+		skinning += (a_boneWeight1.y) * bones3;
+	}
+
+	index = int(a_boneWeight2.x);
+	if(index == 0){
+		skinning += (a_boneWeight2.y) * bones0;
+	}else if(index == 1){
+		skinning += (a_boneWeight2.y) * bones1;
+	}else if(index == 2){
+		skinning += (a_boneWeight2.y) * bones2;
+	}else if(index == 3){
+		skinning += (a_boneWeight2.y) * bones3;
+	}
+
+	index = int(a_boneWeight3.x);
+	if(index == 0){
+		skinning += (a_boneWeight3.y) * bones0;
+	}else if(index == 1){
+		skinning += (a_boneWeight3.y) * bones1;
+	}else if(index == 2){
+		skinning += (a_boneWeight3.y) * bones2;
+	}else if(index == 3){
+		skinning += (a_boneWeight3.y) * bones3;
+	}
 
 	// Transform the model.
 	transformedPosition = u_geomTrans * skinning * a_position;

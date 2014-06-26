@@ -231,8 +231,8 @@ public class MainActivity extends AndroidApplication implements ActionResolver, 
 
 		// Configure LibGDX.
 		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
-		cfg.useAccelerometer = false;
-		cfg.useCompass = false;
+		cfg.useAccelerometer = true;
+		cfg.useCompass = true;
 		cfg.useWakelock = true;
 
 		// Launch the LibGDX core game class.

@@ -1,6 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
- * Copyright (C) 2013 Miguel Angel Astor Romero
+/*
+ * Copyright (C) 2014 Miguel Angel Astor Romero
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,9 +12,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
--->
-<resources>
-    <string name="app_name">NxtAR-core</string>
-    <string name="ocv_failed">Error al inicializar OpenCV</string>
-    <string name="ocv_success">OpenCV inicializado con éxito</string>
-</resources>
+ */
+uniform mat4 u_projTrans;
+uniform float u_displacement;
+
+attribute vec4 a_position;
+attribute vec2 a_texCoord0;
+
+varying vec2 v_texCoords;
+
+void main(){
+	v_texCoords = a_texCoord0 + u_displacement;
+	gl_Position = u_projTrans * a_position;
+}

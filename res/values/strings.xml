@@ -15,7 +15,7 @@
  * limitations under the License.
 -->
 <resources>
-    <string name="app_name">NxtAR</string>
+    <string name="app_name">NxtAR-core</string>
     <string name="ocv_failed">Failed to initialize OpenCV</string>
     <string name="ocv_success">OpenCV initialized successfully</string>
 </resources>

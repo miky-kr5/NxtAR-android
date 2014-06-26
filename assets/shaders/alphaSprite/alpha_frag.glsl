@@ -1,6 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
- * Copyright (C) 2013 Miguel Angel Astor Romero
+/*
+ * Copyright (C) 2014 Miguel Angel Astor Romero
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,9 +12,18 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
--->
-<resources>
-    <string name="app_name">NxtAR-core</string>
-    <string name="ocv_failed">Error al inicializar OpenCV</string>
-    <string name="ocv_success">OpenCV inicializado con éxito</string>
-</resources>
+ */
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform sampler2D u_texture;
+
+varying vec2 v_texCoords;
+
+void main(){
+	vec4 texColor = texture2D(u_texture, v_texCoords);
+	if(texColor.a > 0.0)
+		texColor.a = 0.5;
+	gl_FragColor = texColor;
+}
